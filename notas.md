@@ -1,24 +1,79 @@
 
+# Índice
+- [CENTRAL](#central)
+		- [Estrutura](#estrutura)
+			- [Registo de um user](#registo-de-um-user)
+			- [Login de um user](#login-de-um-user)
+			- [Logout de um superuser](#logout-de-um-superuser)
+			- [Atribuição de estado de superuser](#atribui%C3%A7%C3%A3o-de-estado-de-superuser)
+- [USER](#user)
+		- [Estrutura](#estrutura-1)
+		- [Ações](#a%C3%A7%C3%B5es)
+			- [Transformação em superuser](#transforma%C3%A7%C3%A3o-em-superuser)
+			- [Registo](#registo)
+			- [Login](#login)
+	- [FOLLOWEE](#followee)
+			- [Login](#login-1)
+			- [Logout](#logout)
+			- [Subscribe](#subscribe)
+			- [Posts](#posts)
+	- [FOLLOWER](#follower)
+			- [Login](#login-2)
+			- [Login do followee](#login-do-followee)
+			- [Logout do followee:](#logout-do-followee)
+			- [Subscribe](#subscribe-1)
+			- [Posts](#posts-1)
+	- [SUPERUSER](#superuser)
+			- [Logout](#logout-1)
+- [Implementação](#implementa%C3%A7%C3%A3o)
+	- [Flooding das mensagens](#flooding-das-mensagens)
+			- [Tipos de mensagens que necessitam de flooding](#tipos-de-mensagens-que-necessitam-de-flooding)
+			- [Como fazer flooding](#como-fazer-flooding)
+- [To do](#to-do)
+- [Questões](#quest%C3%B5es)
+- [Extras](#extras)
+
 # CENTRAL
 
-### GUARDA:
+### Estrutura
 - os IPs dos superusers que existem (assinala se estão online ou não)
 - os users que estão registados
 
-### AÇÕES:
-- Promoção de user a superuser
+#### Registo de um user
+- Ao receber a mensagem do tipo ```SIGNUP```:
+	- Se o username ainda não existir:
+	```
+	USERNAME: central
+	IP: <ip>
+	TYPE: ACK
+	```
 
-**Login de um user**
-- É-lhe atribuído um superuser aleatoriamente.
+	- Se o username já existir:
+	```
+	USERNAME: central
+	IP: <ip>
+	TYPE: NACK
+	```
+
+#### Login de um user
+- Ao receber a mensagem do tipo ```LOGIN```:
+	- Caso as credenciais estejam erradas é-lhe enviada a seguinte mensagem:
+	```
+	USERNAME: central
+	IP: <ip>
+	TYPE: NACK
+	```
+
+	- Caso as credenciais estejam corretas é-lhe atribuído um superuser aleatoriamente
+	```
+	USERNAME: central
+	IP: <superuser_ip>
+	TYPE: SUPERUSER
+	```
+
 - Caso se trate de um superuser, é atualizada a estrutura com informação de que este está ```ONLINE```
 
-```
-USERNAME: central
-IP: <superuser_ip>
-TYPE: SUPERUSER
-```
-
-**Logout de um superuser**
+#### Logout de um superuser
 - Atualiza a estrutura com informação de que este está ```OFFLINE```
 - Escolhe aleatoriamente um superuser
 - Faz flooding de uma mensagem de reatribuição de superuser
@@ -30,10 +85,7 @@ TYPE: SUPERUSER_UPDATE
 UUID: <uuid>
 ```
 
-**Registo de um user:**
-
-
-**Atribuição de estado de superuser:**
+#### Atribuição de estado de superuser
 - Quando não existe nenhum superuser, a central deve nomear um dos users como superuser
 	1. Seleciona um dos users existentes
 	2. Envia uma mensagem ao superuser:
@@ -46,9 +98,12 @@ UUID: <uuid>
 		- se receber um ACK do novo superuser atualiza a estrutura
 		- se não receber nenhum ACK, volta ao ponto 1.
 
+
 # USER
 	
-### GUARDA:
+### Estrutura
+- o seu username
+- a sua password
 - os seus posts
 - os posts dos seus followees
 - os followees
@@ -58,14 +113,14 @@ UUID: <uuid>
 - se é superuser ou não
 - IP da central
 
-### AÇÕES:
+### Ações
 - Registo
 - Login
 - Logout
 - Post
 - Subscribe
 
-**Transformação em superuser:**
+#### Transformação em superuser
 - Transforma-se quando:
 	- tem mais de x followers
 	- está ativo há mais x tempo (_uptime_)
@@ -77,12 +132,29 @@ IP: <superuser_ip>
 TYPE: SUPERUSER
 ```
 
-**Login:**
+#### Registo
+- Manda uma mensagem do tipo ```SIGNUP``` para a central
+
+```
+USERNAME: <username>
+IP: <ip>
+TYPE: SIGNUP
+PASSWORD: <password>
+```
+
+#### Login
+- Envia uma mensagem de login à central
+```
+USERNAME: <username>
+IP: <ip>
+TYPE: LOGIN
+PASSWORD: <password>
+```
 - Recebe mensagem com o IP do seu superuser (```SUPERUSER```) e atualiza a estrutura
 
 ## FOLLOWEE
 	
-**Login:**
+#### Login
 - Envia mensagem de login para os followers:
 
 ```
@@ -91,7 +163,7 @@ IP: <ip>
 TYPE: LOGGED IN
 ```
 
-**Logout:**
+#### Logout
 - Envia mensagem de logout para os followers:
 
 ```
@@ -99,7 +171,7 @@ USERNAME: <username>
 TYPE: LOGGED OUT
 ```
 
-**Subscribe:**
+#### Subscribe
 - Recebe mensagem de ```SUBSCRIPTION_OTHER``` de um follower
 
 Envia uma mensagem de login aos novos followers:
@@ -122,7 +194,7 @@ FOLLOWERS: <followers list>
 POSTS: <posts list>
 ```
 
-**Posts:**
+#### Posts
 - Recebe mensagem a pedir posts (```UPDATE```) a partir de um certo identificador
 
 Envia uma mensagem com os respetivos posts:
@@ -144,7 +216,7 @@ POSTS: <posts list>
 
 ## FOLLOWER
 
-**Login:**
+#### Login
 - Atualiza as estruturas: 
 	1. Coloca o estado de todos os followees a ```UNKNOWN```
 	2. Assinala os posts como ```OUTDATED```
@@ -158,7 +230,7 @@ TYPE: UPDATE
 LAST_POST_ID: <last_post_id>
 ```
 
-**Login do followee:**
+#### Login do followee
 - Recebe mensagem de login do followee:
 	1. Atualiza a estrutura com ```ONLINE``` e com o novo IP
 	2. Caso os posts do followee estejam ```OUTDATED```, envia uma mensagem
@@ -169,10 +241,10 @@ LAST_POST_ID: <last_post_id>
 	LAST_POST_ID: <last_post_id>
 	```
 
-**Logout do followee:**
+#### Logout do followee:
 - Recebe mensagem de logout do followee e atualiza a estrutura com ```OFFLINE```
 
-**Subscribe:**
+#### Subscribe
 - Faz subscribe de um user
 	1. Propaga o pedido pela rede
 
@@ -245,14 +317,14 @@ LAST_POST_ID: <last_post_id>
 	FOLLOWER: <follower_username>
 	```
 
-**Posts:**
+#### Posts
 - Recebe uma mensagem de ```POST``` de um followee e guarda
 - Recebe uma mensagem de ```POSTS``` de um followee, atualiza a estrutura e assinala os posts como ```UPDATED```
 
 
 ## SUPERUSER
 
-**Logout:**
+#### Logout
 - Envia mensagem de logout para a central:
 
 ```
@@ -265,15 +337,14 @@ TYPE: LOGGED OUT
 
 ## Flooding das mensagens
 
-**Tipos de mensagens que necessitam de flooding:**
+#### Tipos de mensagens que necessitam de flooding
 - ```SUBSCRIPTION```
 - ```SUPERUSER_UPDATE```
 
-**Como fazer flooding:**
+#### Como fazer flooding
 - Cada mensagem tem um UUID diferente (https://docs.oracle.com/javase/7/docs/api/java/util/UUID.html)
 - O UUID das mensagens de flooding é guardado numa estrutura
 - Eu só propago as mensagens cujo UUID não esteja na minha estrutura, ou seja, que não propaguei antes.
-
 
 
 # To do
@@ -284,9 +355,11 @@ TYPE: LOGGED OUT
 - IPs mudarem
 - Respeitar a causalidade (usar os escalares de lamport)
 
+
 # Questões
 
 - Podemos assumir que não há crash stop?
+
 
 # Extras
 
