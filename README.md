@@ -1,39 +1,43 @@
-
 # Índice
-- [CENTRAL](#central)
+
+- [Índice](#%C3%ADndice)
+- [Central](#central)
 	- [Estrutura](#estrutura)
 		- [Registo de um user](#registo-de-um-user)
 		- [Login de um user](#login-de-um-user)
 		- [Logout de um superuser](#logout-de-um-superuser)
 		- [Atribuição de estado de superuser](#atribui%C3%A7%C3%A3o-de-estado-de-superuser)
-- [USER](#user)
+- [User](#user)
 	- [Estrutura](#estrutura-1)
 	- [Ações](#a%C3%A7%C3%B5es)
 		- [Transformação em superuser](#transforma%C3%A7%C3%A3o-em-superuser)
 		- [Registo](#registo)
 		- [Login](#login)
-	- [FOLLOWEE](#followee)
+	- [Followee](#followee)
 		- [Login](#login-1)
 		- [Logout](#logout)
 		- [Subscribe](#subscribe)
 		- [Posts](#posts)
-	- [FOLLOWER](#follower)
+	- [Follower](#follower)
 		- [Login](#login-2)
 		- [Login do followee](#login-do-followee)
 		- [Logout do followee:](#logout-do-followee)
 		- [Subscribe](#subscribe-1)
 		- [Posts](#posts-1)
-	- [SUPERUSER](#superuser)
+	- [Superuser](#superuser)
 		- [Logout](#logout-1)
 - [Implementação](#implementa%C3%A7%C3%A3o)
 	- [Flooding das mensagens](#flooding-das-mensagens)
 		- [Tipos de mensagens que necessitam de flooding](#tipos-de-mensagens-que-necessitam-de-flooding)
 		- [Como fazer flooding](#como-fazer-flooding)
+- [Tecnologias](#tecnologias)
+	- [User](#user)
+	- [Central](#central)
 - [To do](#to-do)
 - [Questões](#quest%C3%B5es)
 - [Extras](#extras)
 
-# CENTRAL
+# Central
 
 ### Estrutura
 - os IPs dos superusers que existem (assinala se estão online ou não)
@@ -99,7 +103,7 @@ UUID: <uuid>
 		- se não receber nenhum ACK, volta ao ponto 1.
 
 
-# USER
+# User
 	
 ### Estrutura
 - o seu username
@@ -152,7 +156,7 @@ PASSWORD: <password>
 ```
 - Recebe mensagem com o IP do seu superuser (```SUPERUSER```) e atualiza a estrutura
 
-## FOLLOWEE
+## Followee
 	
 #### Login
 - Envia mensagem de login para os followers:
@@ -214,7 +218,7 @@ POSTS: <posts list>
 ```
 
 
-## FOLLOWER
+## Follower
 
 #### Login
 - Atualiza as estruturas: 
@@ -322,7 +326,7 @@ LAST_POST_ID: <last_post_id>
 - Recebe uma mensagem de ```POSTS``` de um followee, atualiza a estrutura e assinala os posts como ```UPDATED```
 
 
-## SUPERUSER
+## Superuser
 
 #### Logout
 - Envia mensagem de logout para a central:
@@ -344,7 +348,20 @@ TYPE: LOGGED OUT
 #### Como fazer flooding
 - Cada mensagem tem um UUID diferente (https://docs.oracle.com/javase/7/docs/api/java/util/UUID.html)
 - O UUID das mensagens de flooding é guardado numa estrutura
-- Eu só propago as mensagens cujo UUID não esteja na minha estrutura, ou seja, que não propaguei antes.
+- Eu só propago as mensagens cujo UUID não esteja na minha estrutura, ou seja, que não propaguei antes
+
+# Tecnologias
+
+## User
+	
+- Java + Atomix + JeroMQ
+	- O Atomix é uma framework estável que permite assíncronia e uma boa gestão e implementação de protocolos de comunicação
+	- O JeroMQ permite conectar sockets segundo diferentes padrões, nomeadamente os padrões Publisher-Subscriber e Request-Reply, que são adequados ao problema em questão. Para além disto, torna todo o processo mais eficiente e robusto devido ao facto de implementar load-balancing, message-queueing, reconnection e routing eficiente de mensagens.
+
+## Central
+
+- Erlang
+	- Apesar da central lidar apenas com o login e registo de utilizadores, e com a gestão dos superusers, que são tarefas relativamente simples e independentes de estado de conexão, este não deixa de ser um componente centralizado que representa um bottleneck do sistema. Sendo que o Erlang segue o modelo de atores, em que cada ator é um processo leve com um custo de criação muito baixo e o envio de mensagens entre estes é assíncrono e não bloqueante, esta tecnologia permitirá que a central consiga lidar de melhor forma com o número de conexões que recebe, resultando assim num melhor desempenho do sistema.
 
 
 # To do
