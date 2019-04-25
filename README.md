@@ -47,15 +47,11 @@
 - Ao receber a mensagem do tipo ```SIGNUP```:
 	- Se o username ainda não existir:
 	```
-	USERNAME: central
-	IP: <ip>
 	TYPE: ACK
 	```
 
 	- Se o username já existir:
 	```
-	USERNAME: central
-	IP: <ip>
 	TYPE: NACK
 	```
 
@@ -63,15 +59,12 @@
 - Ao receber a mensagem do tipo ```LOGIN```:
 	- Caso as credenciais estejam erradas é-lhe enviada a seguinte mensagem:
 	```
-	USERNAME: central
-	IP: <ip>
 	TYPE: NACK
 	```
 
 	- Caso as credenciais estejam corretas é-lhe atribuído um superuser aleatoriamente
 	```
-	USERNAME: central
-	IP: <superuser_ip>
+	SUPERUSER: <superuser_private_group>
 	TYPE: SUPERUSER
 	```
 
@@ -80,13 +73,17 @@
 #### Logout de um superuser
 - Atualiza a estrutura com informação de que este está ```OFFLINE```
 - Escolhe aleatoriamente um superuser
-- Faz flooding de uma mensagem de reatribuição de superuser
+- Envia para o grupo daquele superuser o novo superuser que escolheu
 
 ```
-USERNAME: central
-IP: <superuser_ip>
+SUPERUSER: <superuser_private_group>
 TYPE: SUPERUSER_UPDATE
-UUID: <uuid>
+```
+
+- Envia ao superuser um ack
+
+```
+TYPE: DISCONNECT
 ```
 
 #### Atribuição de estado de superuser
@@ -94,8 +91,6 @@ UUID: <uuid>
 	1. Seleciona um dos users existentes
 	2. Envia uma mensagem ao superuser:
 	```
-	USERNAME: central
-	IP: <ip>
 	TYPE: PROMOTION
 	```
 	3. Espera um _timeout_ e:
@@ -109,13 +104,10 @@ UUID: <uuid>
 - o seu username
 - a sua password
 - os seus posts
-- os posts dos seus followees
-- os followees
-- os followers
-- os neighbours (caso seja um superuser)
+- os followees e os seus posts (posts + estado (UPDATED ou OUTDATED))
 - o seu superuser
 - se é superuser ou não
-- IP da central
+- private group da central
 
 ### Ações
 - Registo
@@ -128,29 +120,27 @@ UUID: <uuid>
 - Transforma-se quando:
 	- tem mais de x followers
 	- está ativo há mais x tempo (_uptime_)
+	- melhor hardware (?)
 - Atualiza a sua estrutura, indicando que é um superuser
 - Avisa a central de que passou a ser um superuser:
 
 ```
-IP: <superuser_ip>
 TYPE: SUPERUSER
 ```
 
 #### Registo
+- Conecta-se à central e faz join ao grupo da central
 - Manda uma mensagem do tipo ```SIGNUP``` para a central
 
 ```
-USERNAME: <username>
-IP: <ip>
 TYPE: SIGNUP
 PASSWORD: <password>
 ```
 
 #### Login
+- Conecta-se à central e faz join ao grupo da central
 - Envia uma mensagem de login à central
 ```
-USERNAME: <username>
-IP: <ip>
 TYPE: LOGIN
 PASSWORD: <password>
 ```
@@ -159,42 +149,27 @@ PASSWORD: <password>
 ## Followee
 	
 #### Login
-- Envia mensagem de login para os followers:
+- Faz join ao seu grupo
+- Caso não tenha informação local, envia uma mensagem para o grupo a pedir os dados dele:
 
 ```
-USERNAME: <username>
-IP: <ip>
-TYPE: LOGGED IN
+TYPE: DATA REQUEST
 ```
 
 #### Logout
-- Envia mensagem de logout para os followers:
+- Envia mensagem de logout para o grupo, com os seus followees:
 
 ```
-USERNAME: <username>
 TYPE: LOGGED OUT
+FOLLOWEES: <followees_list>
 ```
 
 #### Subscribe
-- Recebe mensagem de ```SUBSCRIPTION_OTHER``` de um follower
-
-Envia uma mensagem de login aos novos followers:
-
-```
-USERNAME: <username>
-IP: <ip>
-TYPE: LOGGED IN
-```
-
-- Recebe mensagem de ```SUBSCRIPTION``` de um user, cujo followee seja ele
-
-Envia uma mensagem de subscribe aos novos followers:
+- Recebe mensagem de ```SUBSCRIBE``` de um user
+- Se a mensagem tiver vindo do grupo dele, envia uma mensagem ao novo follower:
 
 ```
-USERNAME: <username>
-IP: <ip>
-TYPE: SUBSCRIBE
-FOLLOWERS: <followers list>
+TYPE: SUBSCRIPTION
 POSTS: <posts list>
 ```
 
@@ -204,7 +179,6 @@ POSTS: <posts list>
 Envia uma mensagem com os respetivos posts:
 
 ```
-USERNAME: <username>
 TYPE: POSTS
 POSTS: <posts list>
 ```
@@ -212,7 +186,6 @@ POSTS: <posts list>
 - Envia uma mensagem com uma lista composta pelo único post:
 
 ```
-USERNAME: <username>
 TYPE: POST
 POSTS: <posts list>
 ```
@@ -221,26 +194,19 @@ POSTS: <posts list>
 ## Follower
 
 #### Login
-- Atualiza as estruturas: 
-	1. Coloca o estado de todos os followees a ```UNKNOWN```
-	2. Assinala os posts como ```OUTDATED```
-
-- Envia mensagem a todos os followees
+- Assinala os posts de todos os followees como ```OUTDATED```
+- Junta-se aos grupos dos followees
+- Envia mensagem a pedir posts a todos os followees (ou followers caso o próprio followee não esteja online)
 
 ```
-USERNAME: <username>
-IP: <ip>
 TYPE: UPDATE
 LAST_POST_ID: <last_post_id>
 ```
 
 #### Login do followee
-- Recebe mensagem de login do followee:
-	1. Atualiza a estrutura com ```ONLINE``` e com o novo IP
-	2. Caso os posts do followee estejam ```OUTDATED```, envia uma mensagem
+- Recebe mensagem de membership:
+	Caso os posts do followee estejam ```OUTDATED```, envia uma mensagem
 	```
-	USERNAME: <username>
-	IP: <ip>
 	TYPE: UPDATE
 	LAST_POST_ID: <last_post_id>
 	```
@@ -249,81 +215,26 @@ LAST_POST_ID: <last_post_id>
 - Recebe mensagem de logout do followee e atualiza a estrutura com ```OFFLINE```
 
 #### Subscribe
-- Faz subscribe de um user
-	1. Propaga o pedido pela rede
-
+- Caso queira fazer uma subscrição:
+	1. Junta-se ao grupo do followee
+	2. Espera por uma mensagem de membership para ver se o followee está online
+	3. Se o followee estiver online fala diretamente com ele, senão envia a mensagem para um dos followers que estiver online
 	```
-	USERNAME: <username>
-	IP: <ip>
-	TYPE: SUBSCRIPTION
-	FOLLOWEE: <username>
-	UUID: <uuid>
+	TYPE: SUBSCRIBE
 	```
 
-	2. Processa as mensagem que recebe durante um _timeout_. As mensagens podem ser dos tipos:
-		- OFFLINE
-		- ONLINE
-		- UNKNOWN
-		- SUBSCRIBE
-	3. Caso tenha recebido um ```SUBSCRIBE```, atualiza as estruturas com os posts e a lista de followers e ignora as restantes mensagens (o _timeout_ é interrompido)
-	4. Caso tenha recebido um ```OFFLINE```, interrompe o _timeout_ e envia uma mensagem a esse mesmo follower:
+- Caso tenha recebido uma mensagem de subscribe que não seja do grupo dele, então envia uma mensagem com posts desse followee e com o estado dos posts que tem:
 
-	```
-	USERNAME: <username>
-	IP: <ip>
-	TYPE: SUBSCRIPTION_OTHER
-	FOLLOWEE: <username>
-	```
-
-	5. Ao terminar o _timeout_:
-		1. Caso tenha pelo menos uma mensagem ```ONLINE```, envia uma mensagem a esse mesmo follower:
-
-		```
-		USERNAME: <username>
-		IP: <ip>
-		TYPE: SUBSCRIBE_OTHER
-		FOLLOWEE: <username>
-		```
-
-		2. Caso contrário é apresentada uma mensagem ao utilizador de erro.
-
-	6. Ao receber a resposta da subscrição:
-		1. Caso seja ```SUBSCRIBE``` atualizo a estrutura e assinalo os posts como ```UPDATED```
-		2. Caso seja ```SUBSCRIPTION_OTHER``` atualizo a estrutura e assinalo os posts como ```OUTDATED```
-
-- Recebe pedidos de ```SUBSCRIPTION``` cujo followee especificado na mensagem não seja ele, mas seja um dos seus followees
-	1. Envia uma mensagem ao user que fez o pedido, a dizer qual o estado do followee
-
-	```
-	USERNAME: <username>
-	IP: <ip>
-	TYPE: <followee_status>
-	FOLLOWEE: <username>
-	```
-
-- Recebe pedidos de ```SUBSCRIBE_OTHER```
-	1. Envia uma mensagem ao user
-
-	```
-	USERNAME: <follower_username>
-	TYPE: SUBSCRIBE_OTHER
-	FOLLOWERS: <followers list>
-	POSTS: <posts list>
-	FOLLOWEE: <followee_username>
-	```
-
-	2. Quando o followee ficar online, vai informá-lo da subscrição
-
-	```
-	USERNAME: <username>
-	IP: <follower_ip>
-	TYPE: SUBSCRIPTION_OTHER
-	FOLLOWER: <follower_username>
-	```
+```
+TYPE: POSTS
+POSTS: <posts list>
+STATE: OUTDATED/UPDATED
+```
 
 #### Posts
 - Recebe uma mensagem de ```POST``` de um followee e guarda
 - Recebe uma mensagem de ```POSTS``` de um followee, atualiza a estrutura e assinala os posts como ```UPDATED```
+- Recebe uma mensagem de ```POSTS``` de um follower, atualiza a estrutura e assinala os posts como ```UPDATED``` ou ```OUTDATED```, mediante o que  follower tiver dito na mensagem
 
 
 ## Superuser
@@ -336,27 +247,10 @@ USERNAME: <username>
 TYPE: LOGGED OUT
 ```
 
+- Aguarda o ```DISCONNECT``` da central
 
-# Implementação
-
-## Flooding das mensagens
-
-#### Tipos de mensagens que necessitam de flooding
-- ```SUBSCRIPTION```
-- ```SUPERUSER_UPDATE```
-
-#### Como fazer flooding
-- Cada mensagem tem um UUID diferente (https://docs.oracle.com/javase/7/docs/api/java/util/UUID.html)
-- O UUID das mensagens de flooding é guardado numa estrutura
-- Eu só propago as mensagens cujo UUID não esteja na minha estrutura, ou seja, que não propaguei antes
 
 # Tecnologias
-
-## User
-	
-- Java + Atomix + JeroMQ + ProtocolBuffers
-	- O Atomix é uma framework estável que permite assíncronia e uma boa gestão e implementação de protocolos de comunicação
-	- O JeroMQ permite conectar sockets segundo diferentes padrões, nomeadamente os padrões Publisher-Subscriber e Request-Reply, que são adequados ao problema em questão. Para além disto, torna todo o processo mais eficiente e robusto devido ao facto de implementar load-balancing, message-queueing, reconnection e routing eficiente de mensagens.
 
 ## Central
 
@@ -366,16 +260,7 @@ TYPE: LOGGED OUT
 
 # To do
 
-- Definir o período para guardar as mensagens
-- Definir o período para limpar a minha estrutura de mensagens de flooding
-- Atualizar a lista de followers
-- IPs mudarem
-- Respeitar a causalidade (usar os escalares de lamport)
-
-
-# Questões
-
-- Podemos assumir que não há crash stop?
+- Definir o período para guardar as mensagens e quantas
 
 
 # Extras
