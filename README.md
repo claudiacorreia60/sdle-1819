@@ -354,7 +354,7 @@ TYPE: LOGGED OUT
 
 ## User
 	
-- Java + Atomix + JeroMQ
+- Java + Atomix + JeroMQ + ProtocolBuffers
 	- O Atomix é uma framework estável que permite assíncronia e uma boa gestão e implementação de protocolos de comunicação
 	- O JeroMQ permite conectar sockets segundo diferentes padrões, nomeadamente os padrões Publisher-Subscriber e Request-Reply, que são adequados ao problema em questão. Para além disto, torna todo o processo mais eficiente e robusto devido ao facto de implementar load-balancing, message-queueing, reconnection e routing eficiente de mensagens.
 
