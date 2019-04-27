@@ -2,39 +2,37 @@
 
 - [Índice](#%C3%ADndice)
 - [Central](#central)
-	- [Estrutura](#estrutura)
-		- [Registo de um user](#registo-de-um-user)
-		- [Login de um user](#login-de-um-user)
-		- [Logout de um superuser](#logout-de-um-superuser)
-		- [Atribuição de estado de superuser](#atribui%C3%A7%C3%A3o-de-estado-de-superuser)
+    - [Estrutura](#estrutura)
+      - [Registo de um user](#registo-de-um-user)
+      - [Login de um user](#login-de-um-user)
+      - [Logout de um user](#logout-de-um-user)
+      - [Logout de um superuser](#logout-de-um-superuser)
+      - [Atribuição de estado de superuser](#atribui%C3%A7%C3%A3o-de-estado-de-superuser)
+      - [Receção de uma transformação em superuser](#Rece%C3%A7%C3%A3o-de-uma-transforma%C3%A7%C3%A3o-em-superuser)
 - [User](#user)
-	- [Estrutura](#estrutura-1)
-	- [Ações](#a%C3%A7%C3%B5es)
-		- [Transformação em superuser](#transforma%C3%A7%C3%A3o-em-superuser)
-		- [Registo](#registo)
-		- [Login](#login)
-	- [Followee](#followee)
-		- [Login](#login-1)
-		- [Logout](#logout)
-		- [Subscribe](#subscribe)
-		- [Posts](#posts)
-	- [Follower](#follower)
-		- [Login](#login-2)
-		- [Login do followee](#login-do-followee)
-		- [Logout do followee:](#logout-do-followee)
-		- [Subscribe](#subscribe-1)
-		- [Posts](#posts-1)
-	- [Superuser](#superuser)
-		- [Logout](#logout-1)
-- [Implementação](#implementa%C3%A7%C3%A3o)
-	- [Flooding das mensagens](#flooding-das-mensagens)
-		- [Tipos de mensagens que necessitam de flooding](#tipos-de-mensagens-que-necessitam-de-flooding)
-		- [Como fazer flooding](#como-fazer-flooding)
+    - [Estrutura](#estrutura-1)
+    - [Ações](#a%C3%A7%C3%B5es)
+      - [Transformação em superuser](#transforma%C3%A7%C3%A3o-em-superuser)
+      - [Promoção a superuser](#promo%C3%A7%C3%A3o-a-superuser)
+      - [Registo](#registo)
+      - [Login](#login)
+      - [Logout](#logout)
+  - [Followee](#followee)
+      - [Login](#login-1)
+      - [Logout](#logout-1)
+      - [Subscribe](#subscribe)
+      - [Posts](#posts)
+  - [Follower](#follower)
+      - [Login](#login-2)
+      - [Login do followee](#login-do-followee)
+      - [Logout do followee:](#logout-do-followee)
+      - [Subscribe](#subscribe-1)
+      - [Posts](#posts-1)
+  - [Superuser](#superuser)
+      - [Logout](#logout-2)
+- [Convenções](#conven%C3%A7%C3%B5es)
 - [Tecnologias](#tecnologias)
-	- [User](#user)
-	- [Central](#central)
 - [To do](#to-do)
-- [Questões](#quest%C3%B5es)
 - [Extras](#extras)
 
 # Central
@@ -62,21 +60,36 @@
 	TYPE: NACK
 	```
 
-	- Caso as credenciais estejam corretas é-lhe atribuído um superuser aleatoriamente
+	- Caso as credenciais estejam corretas e caso existam superusers online, é-lhe atribuído um superuser aleatoriamente
 	```
-	SUPERUSER: <superuser_private_group>
+	SUPERUSER: <superuser>
+	SUPERUSERIP: <superuser_ip>
 	TYPE: SUPERUSER
 	```
+	
+	- Caso as credenciais estejam corretas mas não existam superusers online, o user é [promovido](#promo%C3%A7%C3%A3o-a-superuser) a superuser.
 
-- Caso se trate de um superuser, é atualizada a estrutura com informação de que este está ```ONLINE```
+- É atualizada a estrutura com informação de que este (user/superuser) está ```ONLINE```
 
-#### Logout de um superuser
-- Atualiza a estrutura com informação de que este está ```OFFLINE```
-- Escolhe aleatoriamente um superuser
-- Envia para o grupo daquele superuser o novo superuser que escolheu
+#### Logout de um user
+
+- Ao receber a mensagem do tipo ```LOGGED_OUT``` e caso o user não seja um superuser:
+	- Atualiza a estrutura com informação de que este está ```OFFLINE```
+	- Envia ao user um ack
 
 ```
-SUPERUSER: <superuser_private_group>
+TYPE: DISCONNECT
+```
+
+#### Logout de um superuser
+- Ao receber a mensagem do tipo ```LOGGED_OUT```:
+	- Atualiza a estrutura com informação de que este está ```OFFLINE```
+	- Escolhe aleatoriamente um superuser
+	- Envia para o grupo daquele superuser o novo superuser que escolheu
+
+```
+SUPERUSERIP: <superuser_private_ip>
+SUPERUSER: <superuser>
 TYPE: SUPERUSER_UPDATE
 ```
 
@@ -93,10 +106,10 @@ TYPE: DISCONNECT
 	```
 	TYPE: PROMOTION
 	```
-	3. Espera um _timeout_ e:
-		- se receber um ACK do novo superuser atualiza a estrutura
-		- se não receber nenhum ACK, volta ao ponto 1.
 
+#### Receção de uma transformação em superuser
+- Recebe mensagem de um user (```SUPERUSER```):
+	- Atualiza a estrutura
 
 # User
 	
@@ -121,10 +134,23 @@ TYPE: DISCONNECT
 	- tem mais de x followers
 	- está ativo há mais x tempo (_uptime_)
 	- melhor hardware (?)
+	- quando é [promovido](#promo%C3%A7%C3%A3o-a-superuser)
 - Atualiza a sua estrutura, indicando que é um superuser
 - Avisa a central de que passou a ser um superuser:
 
 ```
+SUPERUSERIP: <superuser_ip>
+TYPE: SUPERUSER
+```
+
+_ Sai do grupo do seu antigo superuser.
+
+#### Promoção a superuser
+- Recebe uma mensagem da central (```PROMOTION```)
+- Envia mensagem de [transformação em superuser](#transforma%C3%A7%C3%A3o-em-superuser)
+
+```
+SUPERUSERIP: <superuser_ip>
 TYPE: SUPERUSER
 ```
 
@@ -135,6 +161,7 @@ TYPE: SUPERUSER
 ```
 TYPE: SIGNUP
 PASSWORD: <password>
+IP: <ip>
 ```
 
 #### Login
@@ -143,8 +170,24 @@ PASSWORD: <password>
 ```
 TYPE: LOGIN
 PASSWORD: <password>
+IP: <ip>
 ```
-- Recebe mensagem com o IP do seu superuser (```SUPERUSER```) e atualiza a estrutura
+- Espera um _timeout_ e **ou**:
+	- Recebe mensagem com o IP do seu superuser (```SUPERUSER```) e atualiza a estrutura
+		- Junta-se ao grupo ```<superuser>SuperGroup```
+	- Recebe mensagem do tipo ```PROMOTION```:
+		- Faz [estes passos](#transforma%C3%A7%C3%A3o-em-superuser)
+		- 
+- Caso não receba dentro de um _timeout_ avisa o cliente com um erro "Login falhou, tente mais tarde".
+
+#### Logout
+- Envia mensagem de logout para a central:
+
+```
+TYPE: LOGGED_OUT
+```
+
+- Aguarda o ```DISCONNECT``` da central
 
 ## Followee
 	
@@ -160,7 +203,7 @@ TYPE: DATA REQUEST
 - Envia mensagem de logout para o grupo, com os seus followees:
 
 ```
-TYPE: LOGGED OUT
+TYPE: LOGGED_OUT
 FOLLOWEES: <followees_list>
 ```
 
@@ -243,20 +286,27 @@ STATE: OUTDATED/UPDATED
 - Envia mensagem de logout para a central:
 
 ```
-USERNAME: <username>
-TYPE: LOGGED OUT
+TYPE: LOGGED_OUT
 ```
 
 - Aguarda o ```DISCONNECT``` da central
 
+# Convenções
+
+- O grupo da central será: `centralGroup`
+- O grupo de cada user será: `<username>Group`
+- O grupo de cada superuser será `<username>SuperGroup`
 
 # Tecnologias
 
-## Central
 
-- Erlang
-	- Apesar da central lidar apenas com o login e registo de utilizadores, e com a gestão dos superusers, que são tarefas relativamente simples e independentes de estado de conexão, este não deixa de ser um componente centralizado que representa um bottleneck do sistema. Sendo que o Erlang segue o modelo de atores, em que cada ator é um processo leve com um custo de criação muito baixo e o envio de mensagens entre estes é assíncrono e não bloqueante, esta tecnologia permitirá que a central consiga lidar de melhor forma com o número de conexões que recebe, resultando assim num melhor desempenho do sistema.
-
+- Spread
+	- Toolkit robusto, poderoso e simples que permite desenvolver arquiteturas distribuídas.
+	- Encapsula vários aspetos de sistemas distribuídos assíncronos permitindo focar apenas nos diferentes componentes da aplicação.
+	- Permite abstrair a noção de círculo de amigos em grupos.
+	- Permite unicast, multicast, multi-group multicast e chamadas scatter-gather.
+	- Permite uma grande escalabilidade sem necessidade de grandes alterações arquiteturais.
+	- Permite a entrega de mensagens por ordem causal de maneira simples.
 
 # To do
 
