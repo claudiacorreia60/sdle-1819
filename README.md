@@ -65,7 +65,7 @@
 - Caso se trate de um superuser, é atualizada a estrutura com informação de que este está ```ONLINE```
 
 #### Logout de um superuser
-- Ao receber a mensagem do tipo ```LOGGED OUT```:
+- Ao receber a mensagem do tipo ```LOGGED_OUT```:
 	- Atualiza a estrutura com informação de que este está ```OFFLINE```
 	- Escolhe aleatoriamente um superuser
 	- Envia para o grupo daquele superuser o novo superuser que escolheu
@@ -155,7 +155,7 @@ TYPE: DATA REQUEST
 - Envia mensagem de logout para o grupo, com os seus followees:
 
 ```
-TYPE: LOGGED OUT
+TYPE: LOGGED_OUT
 FOLLOWEES: <followees_list>
 ```
 
@@ -238,7 +238,7 @@ STATE: OUTDATED/UPDATED
 - Envia mensagem de logout para a central:
 
 ```
-TYPE: LOGGED OUT
+TYPE: LOGGED_OUT
 ```
 
 - Aguarda o ```DISCONNECT``` da central
