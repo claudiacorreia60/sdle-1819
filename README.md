@@ -104,7 +104,7 @@ TYPE: DISCONNECT
 	TYPE: PROMOTION
 	```
 	3. Espera um _timeout_ e:
-		- se receber um ACK do novo superuser atualiza a estrutura
+		- se receber um ACK (```SUPERUSER```) do novo superuser atualiza a estrutura
 		- se não receber nenhum ACK, volta ao ponto 1.
 
 
