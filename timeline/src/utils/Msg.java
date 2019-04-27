@@ -8,16 +8,23 @@ public class Msg {
     private String username;
     private String type;
     private String password;
+    private String ip;
     private List<Post> posts;
     private int last_post_id;
     private List<String> followees;
     private String superuser;
+    private String superuserIp;
     private boolean status;
 
 
-    public Msg (String username, String password) {
+    public Msg (String username, String password, String ip) {
         this.username = username;
         this.password = password;
+        this.ip = ip;
+    }
+
+    public Msg(String type) {
+        this.type = type;
     }
 
     public String getUsername() {
@@ -42,6 +49,14 @@ public class Msg {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getIp() {
+        return ip;
+    }
+
+    public void setIp(String ip) {
+        this.ip = ip;
     }
 
     public List<Post> getPosts() {
@@ -74,6 +89,14 @@ public class Msg {
 
     public void setSuperuser(String superuser) {
         this.superuser = superuser;
+    }
+
+    public String getSuperuserIp() {
+        return superuserIp;
+    }
+
+    public void setSuperuserIp(String superuserIp) {
+        this.superuserIp = superuserIp;
     }
 
     public boolean isStatus() {

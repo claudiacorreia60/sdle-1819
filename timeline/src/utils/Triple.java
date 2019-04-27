@@ -1,13 +1,14 @@
 package utils;
 
-public class Pair<FST, SND> {
-
+public class Triple<FST, SND, TRD> {
     private FST fst;
     private SND snd;
+    private TRD trd;
 
-    public Pair(FST fst, SND snd) {
+    public Triple(FST fst, SND snd, TRD trd) {
         this.fst = fst;
         this.snd = snd;
+        this.trd = trd;
     }
 
     public FST getFst() {
@@ -26,20 +27,30 @@ public class Pair<FST, SND> {
         this.snd = snd;
     }
 
+    public TRD getTrd() {
+        return trd;
+    }
+
+    public void setTrd(TRD trd) {
+        this.trd = trd;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        Pair<?, ?> pair = (Pair<?, ?>) o;
-        return getFst().equals(pair.getFst()) &&
-                getSnd().equals(pair.getSnd());
+        Triple<?, ?, ?> triple = (Triple<?, ?, ?>) o;
+        return getFst().equals(triple.getFst()) &&
+                getSnd().equals(triple.getSnd()) &&
+                getTrd().equals(triple.getTrd());
     }
 
     @Override
     public String toString() {
-        return "Pair{" +
+        return "Triple{" +
                 "fst=" + fst +
                 ", snd=" + snd +
+                ", trd=" + trd +
                 '}';
     }
 }
