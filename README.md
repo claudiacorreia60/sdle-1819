@@ -60,7 +60,8 @@
 
 	- Caso as credenciais estejam corretas é-lhe atribuído um superuser aleatoriamente
 	```
-	SUPERUSER: <superuser_private_group>
+	SUPERUSER: <superuser>
+	SUPERUSERIP: <superuser_ip>
 	TYPE: SUPERUSER
 	```
 
@@ -83,7 +84,8 @@ TYPE: DISCONNECT
 	- Envia para o grupo daquele superuser o novo superuser que escolheu
 
 ```
-SUPERUSER: <superuser_private_ip>
+SUPERUSERIP: <superuser_private_ip>
+SUPERUSER: <superuser>
 TYPE: SUPERUSER_UPDATE
 ```
 
@@ -132,6 +134,7 @@ TYPE: DISCONNECT
 - Avisa a central de que passou a ser um superuser:
 
 ```
+SUPERUSERIP: <superuser_ip>
 TYPE: SUPERUSER
 ```
 
