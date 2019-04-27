@@ -74,7 +74,7 @@
 
 - Ao receber a mensagem do tipo ```LOGGED_OUT``` e caso o user não seja um superuser:
 	- Atualiza a estrutura com informação de que este está ```OFFLINE```
-	- Envia ao superuser um ack
+	- Envia ao user um ack
 
 ```
 TYPE: DISCONNECT
