@@ -75,7 +75,7 @@ SUPERUSER: <superuser_private_group>
 TYPE: SUPERUSER_UPDATE
 ```
 
-	- Envia ao superuser um ack
+- Envia ao superuser um ack
 
 ```
 TYPE: DISCONNECT
