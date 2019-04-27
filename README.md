@@ -8,6 +8,7 @@
       - [Logout de um user](#logout-de-um-user)
       - [Logout de um superuser](#logout-de-um-superuser)
       - [Atribuição de estado de superuser](#atribui%C3%A7%C3%A3o-de-estado-de-superuser)
+      - [Receção de uma transformação em superuser](#Rece%C3%A7%C3%A3o-de-uma-transforma%C3%A7%C3%A3o-em-superuser)
 - [User](#user)
     - [Estrutura](#estrutura-1)
     - [Ações](#a%C3%A7%C3%B5es)
@@ -105,6 +106,10 @@ TYPE: DISCONNECT
 	```
 	TYPE: PROMOTION
 	```
+
+#### Receção de uma transformação em superuser
+- Recebe mensagem de um user (```SUPERUSER```):
+	- Atualiza a estrutura
 
 # User
 	
