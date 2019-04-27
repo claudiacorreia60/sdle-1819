@@ -59,12 +59,14 @@
 	TYPE: NACK
 	```
 
-	- Caso as credenciais estejam corretas é-lhe atribuído um superuser aleatoriamente
+	- Caso as credenciais estejam corretas e caso existam superusers online, é-lhe atribuído um superuser aleatoriamente
 	```
 	SUPERUSER: <superuser>
 	SUPERUSERIP: <superuser_ip>
 	TYPE: SUPERUSER
 	```
+	
+	- Caso as credenciais estejam corretas mas não existam superusers online, o user é [promovido](#promo%C3%A7%C3%A3o-a-superuser) a superuser.
 
 - Caso se trate de um superuser, é atualizada a estrutura com informação de que este está ```ONLINE```
 
@@ -103,10 +105,6 @@ TYPE: DISCONNECT
 	```
 	TYPE: PROMOTION
 	```
-	3. Espera um _timeout_ e:
-		- se receber um ACK (```SUPERUSER```) do novo superuser atualiza a estrutura
-		- se não receber nenhum ACK, volta ao ponto 1.
-
 
 # User
 	
@@ -131,6 +129,7 @@ TYPE: DISCONNECT
 	- tem mais de x followers
 	- está ativo há mais x tempo (_uptime_)
 	- melhor hardware (?)
+	- quando é [promovido](#promo%C3%A7%C3%A3o-a-superuser)
 - Atualiza a sua estrutura, indicando que é um superuser
 - Avisa a central de que passou a ser um superuser:
 
@@ -139,12 +138,15 @@ SUPERUSERIP: <superuser_ip>
 TYPE: SUPERUSER
 ```
 
+_ Sai do grupo do seu antigo superuser.
+
 #### Promoção a superuser
 - Recebe uma mensagem da central (```PROMOTION```)
-- Envia ack
+- Envia mensagem de [transformação em superuser](#transforma%C3%A7%C3%A3o-em-superuser)
 
 ```
-TYPE: ACK
+SUPERUSERIP: <superuser_ip>
+TYPE: SUPERUSER
 ```
 
 #### Registo
@@ -165,7 +167,13 @@ TYPE: LOGIN
 PASSWORD: <password>
 IP: <ip>
 ```
-- Recebe mensagem com o IP do seu superuser (```SUPERUSER```) e atualiza a estrutura
+- Espera um _timeout_ e **ou**:
+	- Recebe mensagem com o IP do seu superuser (```SUPERUSER```) e atualiza a estrutura
+		- Junta-se ao grupo ```<superuser>SuperGroup```
+	- Recebe mensagem do tipo ```PROMOTION```:
+		- Faz [estes passos](#transforma%C3%A7%C3%A3o-em-superuser)
+		- 
+- Caso não receba dentro de um _timeout_ avisa o cliente com um erro "Login falhou, tente mais tarde".
 
 #### Logout
 - Envia mensagem de logout para a central:
