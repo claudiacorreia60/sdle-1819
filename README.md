@@ -64,6 +64,16 @@
 
 - Caso se trate de um superuser, é atualizada a estrutura com informação de que este está ```ONLINE```
 
+#### Logout de um user
+
+- Ao receber a mensagem do tipo ```LOGGED_OUT``` e caso o user não seja um superuser:
+	- Atualiza a estrutura com informação de que este está ```OFFLINE```
+	- Envia ao superuser um ack
+
+```
+TYPE: DISCONNECT
+```
+
 #### Logout de um superuser
 - Ao receber a mensagem do tipo ```LOGGED_OUT```:
 	- Atualiza a estrutura com informação de que este está ```OFFLINE```
@@ -71,7 +81,7 @@
 	- Envia para o grupo daquele superuser o novo superuser que escolheu
 
 ```
-SUPERUSER: <superuser_private_group>
+SUPERUSER: <superuser_private_ip>
 TYPE: SUPERUSER_UPDATE
 ```
 
@@ -130,6 +140,7 @@ TYPE: SUPERUSER
 ```
 TYPE: SIGNUP
 PASSWORD: <password>
+IP: <ip>
 ```
 
 #### Login
@@ -138,8 +149,18 @@ PASSWORD: <password>
 ```
 TYPE: LOGIN
 PASSWORD: <password>
+IP: <ip>
 ```
 - Recebe mensagem com o IP do seu superuser (```SUPERUSER```) e atualiza a estrutura
+
+#### Logout
+- Envia mensagem de logout para a central:
+
+```
+TYPE: LOGGED_OUT
+```
+
+- Aguarda o ```DISCONNECT``` da central
 
 ## Followee
 	
