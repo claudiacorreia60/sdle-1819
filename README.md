@@ -238,7 +238,6 @@ STATE: OUTDATED/UPDATED
 - Envia mensagem de logout para a central:
 
 ```
-USERNAME: <username>
 TYPE: LOGGED OUT
 ```
 
