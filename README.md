@@ -12,6 +12,7 @@
     - [Estrutura](#estrutura-1)
     - [Ações](#a%C3%A7%C3%B5es)
       - [Transformação em superuser](#transforma%C3%A7%C3%A3o-em-superuser)
+      - [Promoção a superuser](#promo%C3%A7%C3%A3o-a-superuser)
       - [Registo](#registo)
       - [Login](#login)
       - [Logout](#logout)
@@ -136,6 +137,14 @@ TYPE: DISCONNECT
 ```
 SUPERUSERIP: <superuser_ip>
 TYPE: SUPERUSER
+```
+
+#### Promoção a superuser
+- Recebe uma mensagem da central (```PROMOTION```)
+- Envia ack
+
+```
+TYPE: ACK
 ```
 
 #### Registo
