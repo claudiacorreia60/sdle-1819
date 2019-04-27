@@ -68,7 +68,7 @@
 	
 	- Caso as credenciais estejam corretas mas não existam superusers online, o user é [promovido](#promo%C3%A7%C3%A3o-a-superuser) a superuser.
 
-- Caso se trate de um superuser, é atualizada a estrutura com informação de que este está ```ONLINE```
+- É atualizada a estrutura com informação de que este (user/superuser) está ```ONLINE```
 
 #### Logout de um user
 
