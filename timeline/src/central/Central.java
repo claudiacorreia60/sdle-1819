@@ -50,12 +50,6 @@ public class Central {
                 Msg msg = this.s.decode(message.getData());
 
                 String username = message.getSender().toString().split("#")[1];
-                String password;
-                String ip;
-                String superuser;
-                String superuserIp;
-                Msg msg2;
-                SpreadGroup dest;
 
                 switch (msg.getType()) {
                     case "SIGNUP":
@@ -63,8 +57,9 @@ public class Central {
                         break;
 
                     case "LOGIN":
-                        password = msg.getPassword();
-                        ip = msg.getIp();
+                        String password = msg.getPassword();
+                        String ip = msg.getIp();
+
                         if (this.users.containsKey(username) && password.equals(this.users.get(username).getFst())) {
 
                             // Atualizar as estruturas caso seja User/Superuser
@@ -87,7 +82,7 @@ public class Central {
                         break;
 
                     case "SUPERUSER":
-                        superuserIp = msg.getSuperuserIp();
+                        String superuserIp = msg.getSuperuserIp();
                         this.superusers.put(username, new Pair(true, superuserIp));
                         break;
 
