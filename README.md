@@ -2,39 +2,33 @@
 
 - [Índice](#%C3%ADndice)
 - [Central](#central)
-	- [Estrutura](#estrutura)
-		- [Registo de um user](#registo-de-um-user)
-		- [Login de um user](#login-de-um-user)
-		- [Logout de um superuser](#logout-de-um-superuser)
-		- [Atribuição de estado de superuser](#atribui%C3%A7%C3%A3o-de-estado-de-superuser)
+    - [Estrutura](#estrutura)
+      - [Registo de um user](#registo-de-um-user)
+      - [Login de um user](#login-de-um-user)
+      - [Logout de um superuser](#logout-de-um-superuser)
+      - [Atribuição de estado de superuser](#atribui%C3%A7%C3%A3o-de-estado-de-superuser)
 - [User](#user)
-	- [Estrutura](#estrutura-1)
-	- [Ações](#a%C3%A7%C3%B5es)
-		- [Transformação em superuser](#transforma%C3%A7%C3%A3o-em-superuser)
-		- [Registo](#registo)
-		- [Login](#login)
-	- [Followee](#followee)
-		- [Login](#login-1)
-		- [Logout](#logout)
-		- [Subscribe](#subscribe)
-		- [Posts](#posts)
-	- [Follower](#follower)
-		- [Login](#login-2)
-		- [Login do followee](#login-do-followee)
-		- [Logout do followee:](#logout-do-followee)
-		- [Subscribe](#subscribe-1)
-		- [Posts](#posts-1)
-	- [Superuser](#superuser)
-		- [Logout](#logout-1)
-- [Implementação](#implementa%C3%A7%C3%A3o)
-	- [Flooding das mensagens](#flooding-das-mensagens)
-		- [Tipos de mensagens que necessitam de flooding](#tipos-de-mensagens-que-necessitam-de-flooding)
-		- [Como fazer flooding](#como-fazer-flooding)
+    - [Estrutura](#estrutura-1)
+    - [Ações](#a%C3%A7%C3%B5es)
+      - [Transformação em superuser](#transforma%C3%A7%C3%A3o-em-superuser)
+      - [Registo](#registo)
+      - [Login](#login)
+  - [Followee](#followee)
+      - [Login](#login-1)
+      - [Logout](#logout)
+      - [Subscribe](#subscribe)
+      - [Posts](#posts)
+  - [Follower](#follower)
+      - [Login](#login-2)
+      - [Login do followee](#login-do-followee)
+      - [Logout do followee:](#logout-do-followee)
+      - [Subscribe](#subscribe-1)
+      - [Posts](#posts-1)
+  - [Superuser](#superuser)
+      - [Logout](#logout-1)
 - [Tecnologias](#tecnologias)
-	- [User](#user)
-	- [Central](#central)
+  - [Central](#central-1)
 - [To do](#to-do)
-- [Questões](#quest%C3%B5es)
 - [Extras](#extras)
 
 # Central
@@ -71,16 +65,17 @@
 - Caso se trate de um superuser, é atualizada a estrutura com informação de que este está ```ONLINE```
 
 #### Logout de um superuser
-- Atualiza a estrutura com informação de que este está ```OFFLINE```
-- Escolhe aleatoriamente um superuser
-- Envia para o grupo daquele superuser o novo superuser que escolheu
+- Ao receber a mensagem do tipo ```LOGGED OUT```:
+	- Atualiza a estrutura com informação de que este está ```OFFLINE```
+	- Escolhe aleatoriamente um superuser
+	- Envia para o grupo daquele superuser o novo superuser que escolheu
 
 ```
 SUPERUSER: <superuser_private_group>
 TYPE: SUPERUSER_UPDATE
 ```
 
-- Envia ao superuser um ack
+	- Envia ao superuser um ack
 
 ```
 TYPE: DISCONNECT
