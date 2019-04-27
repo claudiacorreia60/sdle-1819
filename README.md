@@ -26,8 +26,8 @@
       - [Posts](#posts-1)
   - [Superuser](#superuser)
       - [Logout](#logout-1)
+- [Convenções](#conven%C3%A7%C3%B5es)
 - [Tecnologias](#tecnologias)
-  - [Central](#central-1)
 - [To do](#to-do)
 - [Extras](#extras)
 
@@ -243,14 +243,22 @@ TYPE: LOGGED OUT
 
 - Aguarda o ```DISCONNECT``` da central
 
+# Convenções
+
+- O grupo da central será: `centralGroup`
+- O grupo de cada user será: `<username>Group`
+- O grupo de cada superuser será `<username>SuperGroup`
 
 # Tecnologias
 
-## Central
 
-- Erlang
-	- Apesar da central lidar apenas com o login e registo de utilizadores, e com a gestão dos superusers, que são tarefas relativamente simples e independentes de estado de conexão, este não deixa de ser um componente centralizado que representa um bottleneck do sistema. Sendo que o Erlang segue o modelo de atores, em que cada ator é um processo leve com um custo de criação muito baixo e o envio de mensagens entre estes é assíncrono e não bloqueante, esta tecnologia permitirá que a central consiga lidar de melhor forma com o número de conexões que recebe, resultando assim num melhor desempenho do sistema.
-
+- Spread
+	- Toolkit robusto, poderoso e simples que permite desenvolver arquiteturas distribuídas.
+	- Encapsula vários aspetos de sistemas distribuídos assíncronos permitindo focar apenas nos diferentes componentes da aplicação.
+	- Permite abstrair a noção de círculo de amigos em grupos.
+	- Permite unicast, multicast, multi-group multicast e chamadas scatter-gather.
+	- Permite uma grande escalabilidade sem necessidade de grandes alterações arquiteturais.
+	- Permite a entrega de mensagens por ordem causal de maneira simples.
 
 # To do
 
