@@ -15,13 +15,13 @@ import java.util.Map;
 
 public class Follower {
     private String username;
-    private Map<String, List<Pair<Boolean, Map<Integer, Post>>>> followees;
+    private Map<String, Pair<Boolean, Map<Integer, Post>>> followees;
     private Serializer serializer;
     private SpreadConnection connection;
     private Map<String, SpreadGroup> followeesGroups;
 
 
-    public Follower(String username, Map<String, List<Pair<Boolean, Map<Integer, Post>>>> followees, Serializer serializer, SpreadConnection connection) {
+    public Follower(String username, Map<String, Pair<Boolean, Map<Integer, Post>>> followees, Serializer serializer, SpreadConnection connection) {
         this.username = username;
         this.followees = followees;
         this.serializer = serializer;
@@ -30,15 +30,16 @@ public class Follower {
     }
 
     public void login() throws SpreadException {
-        //TODO: atualizar isto de acordo com a nova estrutura de followees
         SpreadGroup group;
-        for (String followee : this.followees.keySet()) {
+        for (Map.Entry<String, Pair<Boolean, Map<Integer, Post>>> entry : this.followees.entrySet()) {
             // Mark posts as OUTDATED
-            this.followees_posts_status.put(followee, false);
+            Pair<Boolean, Map<Integer, Post>> posts = entry.getValue();
+            posts.setFst(false);
+            this.followees.put(entry.getKey(), posts);
             // Join followees' groups
             group = new SpreadGroup();
-            group.join(this.connection, followee);
-            this.followeesGroups.put(followee, group);
+            group.join(this.connection, entry.getKey());
+            this.followeesGroups.put(entry.getKey(), group);
         }
         // Request posts
         for (Map.Entry<String, SpreadGroup> entry : this.followeesGroups.entrySet()) {
