@@ -16,17 +16,6 @@ public class Msg {
     private String superuserIp;
     private boolean status;
 
-
-    public Msg (String username, String password, String ip) {
-        this.username = username;
-        this.password = password;
-        this.ip = ip;
-    }
-
-    public Msg(String type) {
-        this.type = type;
-    }
-
     public String getUsername() {
         return username;
     }

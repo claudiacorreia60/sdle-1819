@@ -1,9 +1,11 @@
+package user;
+
 import io.atomix.utils.serializer.Serializer;
 import spread.SpreadConnection;
 import spread.SpreadException;
 import spread.SpreadGroup;
-import user.Post;
 import utils.Msg;
+import utils.Pair;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -17,20 +19,20 @@ public class User {
     private String myAddress;
     private String username;
     private String password;
-    private List<Post> posts; // ou Map<Integer, user.Post> posts
-    private Map<String, List<Post>> followees;
-    private Map<String, Boolean> followees_posts_status;
-    private String superuser;
-    private boolean is_superuser;
-    private String central_group;
+    private Map<Integer, Post> myPosts;
+    private Map<String, List<Pair<Boolean, Map<Integer, Post>>>> followees;
+    private boolean isSuperuser;
     private Serializer serializer;
     private Socket socket;
     private InputStream in;
     private OutputStream out;
     private BufferedReader input;
     private SpreadConnection connection;
-    private Map<String, SpreadGroup> groups;
+    private SpreadGroup centralGroup;
     private boolean signedIn;
+
+
+    // TODO: mudar login para não usar sockets
 
 
     public User (String hostname, int port) throws IOException {
@@ -39,7 +41,6 @@ public class User {
                         Msg.class,
                         AbstractMap.SimpleEntry.class)
                 .build();
-        this.central_group = "centralGroup";
         this.socket = new Socket(hostname, port);
         this.in = this.socket.getInputStream();
         this.out = this.socket.getOutputStream();
@@ -57,14 +58,16 @@ public class User {
             read = this.input.readLine();
         }
         if (read.equals("1")) {
-            handleChoice("SIGN IN");
+            handleOption("SIGN IN");
         }
         else {
-            handleChoice("SIGN UP");
+            handleOption("SIGN UP");
         }
     }
 
-    public void handleChoice (String choice) throws IOException, SpreadException {
+    public void handleOption (String choice) throws IOException {
+        Msg reply = null;
+
         String result = "NACK";
         System.out.println("\n################## "+choice+" ###################");
         while (result.equals("NACK")) {
@@ -72,37 +75,41 @@ public class User {
             this.username = this.input.readLine();
             System.out.print("> Password: ");
             this.password = this.input.readLine();
-            Msg msg = new Msg(this.username, this.password);
+            Msg msg = new Msg();
+            msg.setUsername(this.username);
+            msg.setPassword(this.password);
             this.out.write(this.serializer.encode(msg));
             this.out.flush();
             byte [] response = this.receive();
-            Msg reply = this.serializer.decode(response);
+            reply = this.serializer.decode(response);
             result = reply.getType();
             if (result.equals("NACK")) {
                 System.out.println("Error: Incorrect credentials. Please try again.");
             }
-            else {
-                this.superuser = reply.getSuperuser();
-            }
         }
         this.signedIn = true;
-        openSpreadConnection();
+        openSpreadConnection(reply.getSuperuser());
     }
 
-    public void openSpreadConnection() throws SpreadException, UnknownHostException {
-        this.connection.connect(
-                InetAddress.getByName("localhost"),
-                4803,
-                this.username,
-                false,
-                false);
+    public void openSpreadConnection(String superuserAddress) throws UnknownHostException {
+        try {
 
-        SpreadGroup group = new SpreadGroup();
-        group.join(this.connection, this.username);
-        this.groups.put(this.username, group);
-        group = new SpreadGroup();
-        group.join(this.connection, this.central_group);
-        this.groups.put(this.central_group, group);
+            //TODO: isto está mal, o user vai fazer join ao grupo da central antes do login
+            // e depois vai fazer leave quando já tiver um superuser ao qual se conectar
+            // por isso já não vai precisar da variável centralGroup
+            this.connection.connect(
+                    InetAddress.getByName(superuserAddress),
+                    4803,
+                    this.username,
+                    false,
+                    false);
+
+            // Join central group
+            this.centralGroup = new SpreadGroup();
+            this.centralGroup.join(this.connection, "centralGroup");
+        } catch (SpreadException e) {
+            e.printStackTrace();
+        }
     }
 
     public byte[] receive(){
@@ -121,4 +128,12 @@ public class User {
         }
         return null;
     }
+
+    public void logout(){
+        // TODO: o superuser fica a aguardar o disconnect da central
+        // TODO: o user avisa a central quando faz logout
+
+    }
+
+    //TODO: quando o user se transforma em superuser tem que avisar a central do seu ip para ela o guardar
 }

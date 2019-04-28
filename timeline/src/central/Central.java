@@ -102,7 +102,7 @@ public class Central {
             msg2 = new Msg("SUPERUSER");
 
             String superuser = getRandomSuperuser();
-            String superuserIp = this.superusers.get(superuser).getSnd();
+            String superuserIp = this.superusers.get(superuser).getSnd();boolean
 
             msg2.setSuperuser(superuser);
             msg2.setSuperuserIp(superuserIp);
@@ -191,7 +191,7 @@ public class Central {
         return online.get(randomIndex);
     }
 
-    private void sendMsg(Msg msg2, SpreadGroup dest) throws SpreadException {
+    private void sendMsg(Msg msg2, SpreadGroup dest) throws SpreadException {boolean
         SpreadMessage newMessage = new SpreadMessage();
         newMessage.setData(this.s.encode(msg2));
         newMessage.addGroup(dest);

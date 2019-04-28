@@ -1,43 +1,36 @@
-import io.atomix.cluster.messaging.ManagedMessagingService;
-import io.atomix.utils.net.Address;
+package user;
+
 import io.atomix.utils.serializer.Serializer;
+
 import spread.SpreadConnection;
 import spread.SpreadException;
 import spread.SpreadGroup;
-import user.Post;
-import utils.Msg;
 
-import java.util.AbstractMap;
+import utils.Pair;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 
 public class Follower {
-    private Address myAddress;
-    //private String username;
-    //private List<Post> posts; // ou Map<Integer, user.Post> posts
-    private Map<String, List<Post>> followees;
-    private Map<String, Boolean> followees_posts_status;
+    private String username;
+    private Map<String, List<Pair<Boolean, Map<Integer, Post>>>> followees;
     private Serializer serializer;
     private SpreadConnection connection;
-    private Map<String, SpreadGroup> groups;
+    private Map<String, SpreadGroup> followeesGroups;
 
 
-    public Follower(Address myAddress, Map<String, List<Post>> followees, Map<String, Boolean> followees_posts_status, SpreadConnection connection, Map<String, SpreadGroup> groups) {
-        this.myAddress = myAddress;
+    public Follower(String username, Map<String, List<Pair<Boolean, Map<Integer, Post>>>> followees, Serializer serializer, SpreadConnection connection) {
+        this.username = username;
         this.followees = followees;
-        this.followees_posts_status = followees_posts_status;
-        this.serializer = Serializer.builder()
-                .withTypes(
-                        Msg.class,
-                        AbstractMap.SimpleEntry.class)
-                .build();
+        this.serializer = serializer;
         this.connection = connection;
+        this.followeesGroups = new HashMap<>();
     }
 
-    public void handleLogin() throws SpreadException {
+    public void login() throws SpreadException {
+        //TODO: atualizar isto de acordo com a nova estrutura de followees
         SpreadGroup group;
         for (String followee : this.followees.keySet()) {
             // Mark posts as OUTDATED
@@ -45,19 +38,23 @@ public class Follower {
             // Join followees' groups
             group = new SpreadGroup();
             group.join(this.connection, followee);
-            this.groups.put(followee, group);
+            this.followeesGroups.put(followee, group);
         }
         // Request posts
-        for (Map.Entry<String, SpreadGroup> entry : this.groups.entrySet()) {
+        for (Map.Entry<String, SpreadGroup> entry : this.followeesGroups.entrySet()) {
             SpreadGroup[] members = entry.getValue().getMembers();
             // TODO: Complete
         }
     }
 
-    public void handleSubscription (String followee) {
+    public void subscription (String followee) throws SpreadException {
         SpreadGroup group = new SpreadGroup();
         group.join(this.connection, followee);
-        this.groups.put(followee, group);
+        this.followeesGroups.put(followee, group);
         // TODO: Complete
+    }
+
+    public void logout(){
+        // TODO: fazer leave dos followeesGroups
     }
 }

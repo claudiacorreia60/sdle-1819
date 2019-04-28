@@ -1,8 +1,12 @@
 package user;
 
 import io.atomix.utils.serializer.Serializer;
+import spread.SpreadConnection;
+import spread.SpreadException;
+import spread.SpreadMessage;
 import utils.Msg;
 
+import java.io.InterruptedIOException;
 import java.util.List;
 import java.util.Map;
 
@@ -23,8 +27,15 @@ public class Receiver implements Runnable {
     @Override
     public void run() {
         while (this.signedIn) {
-            SpreadMessage message = this.connection.receive();
-            String sender = message.getSender().toString()
+            SpreadMessage message = null;
+            try {
+                message = this.connection.receive();
+            } catch (SpreadException e) {
+                e.printStackTrace();
+            } catch (InterruptedIOException e) {
+                e.printStackTrace();
+            }
+            String sender = message.getSender().toString();
             Msg msg = this.serializer.decode(message.getData());
             switch (msg.getType()) {
                 case "POST":
