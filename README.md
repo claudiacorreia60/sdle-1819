@@ -204,7 +204,7 @@ TYPE: DATA REQUEST
 - Se a mensagem tiver vindo do grupo dele, envia uma mensagem ao novo follower:
 
 ```
-TYPE: SUBSCRIPTION
+TYPE: POSTS
 POSTS: <posts list>
 ```
 
