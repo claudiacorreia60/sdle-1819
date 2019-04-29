@@ -86,7 +86,8 @@ public class Central {
                         if (this.waitingPromotion != null && this.waitingPromotion.getFst()) {
                             String loggedOutSuperuser = this.waitingPromotion.getSnd();
 
-                            Msg msg2 = new Msg("SUPERUSER_UPDATE");
+                            Msg msg2 = new Msg();
+                            msg2.setType("SUPERUSER_UPDATE");
                             msg2.setSuperuser(username);
                             msg2.setSuperuserIp(msg.getSuperuserIp());
                             sendMsg(msg2, loggedOutSuperuser+"SuperGroup");
@@ -112,30 +113,34 @@ public class Central {
 
         // Caso existam superusers online
         if (this.superusers.values().stream().anyMatch(p -> p.getFst() == true)) {
-            msg2 = new Msg("SUPERUSER");
+            msg2 = new Msg();
+            msg2.setType("SUPERUSER");
 
             String superuser = getRandomSuperuser();
-            String superuserIp = this.superusers.get(superuser).getSnd();boolean
+            String superuserIp = this.superusers.get(superuser).getSnd();
 
             msg2.setSuperuser(superuser);
             msg2.setSuperuserIp(superuserIp);
             dest = message.getSender();
             sendMsg(msg2, dest);
         } else { // Caso contrário
-            msg2 = new Msg("PROMOTION");
+            msg2 = new Msg();
+            msg2.setType("PROMOTION");
             dest = message.getSender();
             sendMsg(msg2, dest);
         }
     }
 
     private void sendAck(SpreadMessage message) throws SpreadException {
-        Msg msg2 = new Msg("ACK");
+        Msg msg2 = new Msg();
+        msg2.setType("ACK");
         SpreadGroup dest = message.getSender();
         sendMsg(msg2, dest);
     }
 
     private void sendNack(SpreadMessage message) throws SpreadException {
-        Msg msg2 = new Msg("NACK");
+        Msg msg2 = new Msg();
+        msg2.setType("NACK");
         SpreadGroup dest = message.getSender();
         sendMsg(msg2, dest);
     }
@@ -156,12 +161,14 @@ public class Central {
     private void logoutFromUser(SpreadMessage message, String username) throws SpreadException {
         this.users.put(username, new Triple(this.users.get(username).getFst(), false, ""));
 
-        Msg msg2 = new Msg("DISCONNECT");
+        Msg msg2 = new Msg();
+        msg2.setType("DISCONNECT");
         sendMsg(msg2, message.getSender());
     }
 
     private void logoutFromSuperuser(SpreadMessage message, String username) throws SpreadException {
-        Msg msg2 = new Msg("SUPERUSER_UPDATE");
+        Msg msg2 = new Msg();
+        msg2.setType("SUPERUSER_UPDATE");
         this.superusers.put(username, new Pair(false, ""));
         this.users.put(username, new Triple(this.users.get(username).getFst(), false, ""));
 
@@ -219,7 +226,7 @@ public class Central {
         return online.get(randomIndex);
     }
 
-    private void sendMsg(Msg msg2, SpreadGroup dest) throws SpreadException {boolean
+    private void sendMsg(Msg msg2, SpreadGroup dest) throws SpreadException {
         SpreadMessage newMessage = new SpreadMessage();
         newMessage.setData(this.s.encode(msg2));
         newMessage.addGroup(dest);
