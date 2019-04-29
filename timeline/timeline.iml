@@ -9,6 +9,7 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="spread-4.4.0" level="project" />
     <orderEntry type="library" name="Maven: io.atomix:atomix-cluster:3.0.5" level="project" />
     <orderEntry type="library" name="Maven: io.netty:netty-transport:4.1.27.Final" level="project" />
     <orderEntry type="library" name="Maven: io.netty:netty-buffer:4.1.27.Final" level="project" />
@@ -36,6 +37,6 @@
     <orderEntry type="library" name="Maven: io.github.classgraph:classgraph:4.0.6" level="project" />
     <orderEntry type="library" name="Maven: io.atomix:atomix-storage:3.0.5" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-simple:1.7.7" level="project" />
-    <orderEntry type="library" name="spread-4.4.0" level="project" />
+    <orderEntry type="library" name="Maven: org:spread:4.4.0" level="project" />
   </component>
 </module>
