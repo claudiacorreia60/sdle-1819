@@ -10,7 +10,7 @@ public class Msg {
     private String password;
     private String ip;
     private List<Post> posts;
-    private int last_post_id;
+    private int lastPostId;
     private List<String> followees;
     private String superuser;
     private String superuserIp;
@@ -56,12 +56,12 @@ public class Msg {
         this.posts = posts;
     }
 
-    public int getLast_post_id() {
-        return last_post_id;
+    public int getLastPostId() {
+        return lastPostId;
     }
 
-    public void setLast_post_id(int last_post_id) {
-        this.last_post_id = last_post_id;
+    public void setLastPostId(int lastPostId) {
+        this.lastPostId = lastPostId;
     }
 
     public List<String> getFollowees() {
