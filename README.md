@@ -199,20 +199,12 @@ TYPE: LOGGED_OUT
 TYPE: DATA REQUEST
 ```
 
-#### Logout
-- Envia mensagem de logout para o grupo, com os seus followees:
-
-```
-TYPE: LOGGED_OUT
-FOLLOWEES: <followees_list>
-```
-
 #### Subscribe
 - Recebe mensagem de ```SUBSCRIBE``` de um user
 - Se a mensagem tiver vindo do grupo dele, envia uma mensagem ao novo follower:
 
 ```
-TYPE: SUBSCRIPTION
+TYPE: POSTS
 POSTS: <posts list>
 ```
 
@@ -254,16 +246,14 @@ LAST_POST_ID: <last_post_id>
 	LAST_POST_ID: <last_post_id>
 	```
 
-#### Logout do followee:
-- Recebe mensagem de logout do followee e atualiza a estrutura com ```OFFLINE```
-
 #### Subscribe
 - Caso queira fazer uma subscrição:
 	1. Junta-se ao grupo do followee
 	2. Espera por uma mensagem de membership para ver se o followee está online
 	3. Se o followee estiver online fala diretamente com ele, senão envia a mensagem para um dos followers que estiver online
 	```
-	TYPE: SUBSCRIBE
+	TYPE: UPDATE
+	LAST_POST_ID: <last_post_id>
 	```
 
 - Caso tenha recebido uma mensagem de subscribe que não seja do grupo dele, então envia uma mensagem com posts desse followee e com o estado dos posts que tem:
