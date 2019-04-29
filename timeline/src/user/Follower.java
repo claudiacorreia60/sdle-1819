@@ -1,63 +1,98 @@
-import io.atomix.cluster.messaging.ManagedMessagingService;
-import io.atomix.utils.net.Address;
+package user;
+
 import io.atomix.utils.serializer.Serializer;
+
 import spread.SpreadConnection;
 import spread.SpreadException;
 import spread.SpreadGroup;
-import user.Post;
-import utils.Msg;
 
-import java.util.AbstractMap;
+import spread.SpreadMessage;
+import utils.Msg;
+import utils.Pair;
+
+import java.io.InterruptedIOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 
 
 public class Follower {
-    private Address myAddress;
-    //private String username;
-    //private List<Post> posts; // ou Map<Integer, user.Post> posts
-    private Map<String, List<Post>> followees;
-    private Map<String, Boolean> followees_posts_status;
+    private String username;
+    private Map<String, Pair<Boolean, Map<Integer, Post>>> followees;
     private Serializer serializer;
     private SpreadConnection connection;
-    private Map<String, SpreadGroup> groups;
+    private Map<String, SpreadGroup> followeesGroups;
 
 
-    public Follower(Address myAddress, Map<String, List<Post>> followees, Map<String, Boolean> followees_posts_status, SpreadConnection connection, Map<String, SpreadGroup> groups) {
-        this.myAddress = myAddress;
+    public Follower(String username, Map<String, Pair<Boolean, Map<Integer, Post>>> followees, Serializer serializer, SpreadConnection connection) {
+        this.username = username;
         this.followees = followees;
-        this.followees_posts_status = followees_posts_status;
-        this.serializer = Serializer.builder()
-                .withTypes(
-                        Msg.class,
-                        AbstractMap.SimpleEntry.class)
-                .build();
+        this.serializer = serializer;
         this.connection = connection;
+        this.followeesGroups = new HashMap<>();
     }
 
-    public void handleLogin() throws SpreadException {
+    public void login() throws SpreadException, InterruptedIOException {
         SpreadGroup group;
-        for (String followee : this.followees.keySet()) {
+        for (Map.Entry<String, Pair<Boolean, Map<Integer, Post>>> entry : this.followees.entrySet()) {
             // Mark posts as OUTDATED
-            this.followees_posts_status.put(followee, false);
+            Pair<Boolean, Map<Integer, Post>> posts = entry.getValue();
+            posts.setFst(false);
+            this.followees.put(entry.getKey(), posts);
             // Join followees' groups
             group = new SpreadGroup();
-            group.join(this.connection, followee);
-            this.groups.put(followee, group);
-        }
-        // Request posts
-        for (Map.Entry<String, SpreadGroup> entry : this.groups.entrySet()) {
-            SpreadGroup[] members = entry.getValue().getMembers();
-            // TODO: Complete
+            group.join(this.connection, entry.getKey());
+            this.followeesGroups.put(entry.getKey(), group);
         }
     }
 
-    public void handleSubscription (String followee) {
+    public void sendPostsRequest(String privateGroup) throws SpreadException {
+        Msg msg = new Msg();
+        msg.setType("UPDATE");
+        msg.setLastPostId(findLastPostId(getUsername(privateGroup)));
+        sendMsg(msg, privateGroup);
+    }
+
+    public String getUsername (String privateGroup) {
+        // Select private name from private group
+        String[] parts = privateGroup.substring(1).split("#");
+        return parts[0];
+    }
+
+    public int findLastPostId (String username) {
+        Map<Integer, Post> posts = this.followees.get(username).getSnd();
+        // Select highest post ID
+        return Collections.max(posts.keySet());
+    }
+
+    public void subscription (String followee) throws SpreadException {
         SpreadGroup group = new SpreadGroup();
         group.join(this.connection, followee);
-        this.groups.put(followee, group);
+        this.followeesGroups.put(followee, group);
         // TODO: Complete
+    }
+
+    public void logout(){
+        // TODO: fazer leave dos followeesGroups
+    }
+
+    private void sendMsg(Msg m, String group) throws SpreadException {
+        SpreadMessage message = new SpreadMessage();
+
+        message.setData(this.serializer.encode(m));
+        message.addGroup(group);
+        message.setAgreed();
+        message.setReliable();
+
+        connection.multicast(message);
+    }
+
+    public boolean checkPostsStatus(String followee) {
+        return this.followees.get(followee).getFst();
+    }
+
+    public String getUsername() {
+        return username;
     }
 }
