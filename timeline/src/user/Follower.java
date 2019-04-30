@@ -11,10 +11,7 @@ import utils.Msg;
 import utils.Pair;
 
 import java.io.InterruptedIOException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 public class Follower {
@@ -42,7 +39,7 @@ public class Follower {
             this.followees.put(entry.getKey(), posts);
             // Join followees' groups
             group = new SpreadGroup();
-            group.join(this.connection, entry.getKey());
+            group.join(this.connection, entry.getKey()+"Group");
             this.followeesGroups.put(entry.getKey(), group);
         }
     }
@@ -62,22 +59,24 @@ public class Follower {
 
     public int findLastPostId (String username) {
         Map<Integer, Post> posts = this.followees.get(username).getSnd();
+        if (posts.size() == 0) {
+            return 0;
+        }
         // Select highest post ID
         return Collections.max(posts.keySet());
     }
 
-    public void subscription (String followee) throws SpreadException {
+    public void subscribe (String followee) throws SpreadException {
         SpreadGroup group = new SpreadGroup();
-        group.join(this.connection, followee);
+        group.join(this.connection, followee+"Group");
         this.followeesGroups.put(followee, group);
-        // TODO: Complete
     }
 
     public void logout(){
         // TODO: fazer leave dos followeesGroups
     }
 
-    private void sendMsg(Msg m, String group) throws SpreadException {
+    public void sendMsg(Msg m, String group) throws SpreadException {
         SpreadMessage message = new SpreadMessage();
 
         message.setData(this.serializer.encode(m));
@@ -90,6 +89,29 @@ public class Follower {
 
     public boolean checkPostsStatus(String followee) {
         return this.followees.get(followee).getFst();
+    }
+
+    public void updatePosts(String followee, List<Post> posts, boolean postsStatus, String type) {
+        Pair<Boolean, Map<Integer, Post>> pair = this.followees.get(followee);
+        Map<Integer, Post> followeePosts = pair.getSnd();
+        for (Post post : posts) {
+            followeePosts.put(post.getId(), post);
+            System.out.println("################## NEW POST ##################");
+            System.out.println("FROM: "+followee);
+            System.out.println("DATE: "+post.getDate());
+            System.out.println("POST: "+post.getContent());
+        }
+        if (type.equals("POSTS")) {
+            pair.setFst(postsStatus);
+        }
+        pair.setSnd(followeePosts);
+        this.followees.put(followee, pair);
+    }
+
+    public Pair<Boolean, List<Post>> getPosts(String followee) {
+        List<Post> posts = new ArrayList<>(this.followees.get(followee).getSnd().values());
+        Pair<Boolean, List<Post>> pair = new Pair<>(this.followees.get(followee).getFst(), posts);
+        return pair;
     }
 
     public String getUsername() {

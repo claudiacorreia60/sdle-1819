@@ -5,24 +5,15 @@ import user.Post;
 import java.util.List;
 
 public class Msg {
-    private String username;
     private String type;
     private String password;
     private String ip;
     private List<Post> posts;
     private int lastPostId;
-    private List<String> followees;
     private String superuser;
     private String superuserIp;
     private boolean status;
 
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
 
     public String getType() {
         return type;
@@ -64,14 +55,6 @@ public class Msg {
         this.lastPostId = lastPostId;
     }
 
-    public List<String> getFollowees() {
-        return followees;
-    }
-
-    public void setFollowees(List<String> followees) {
-        this.followees = followees;
-    }
-
     public String getSuperuser() {
         return superuser;
     }
@@ -88,7 +71,7 @@ public class Msg {
         this.superuserIp = superuserIp;
     }
 
-    public boolean isStatus() {
+    public boolean getStatus() {
         return status;
     }
 

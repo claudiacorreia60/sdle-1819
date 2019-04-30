@@ -18,47 +18,66 @@ import java.util.stream.Collectors;
 public class UserReceiver implements Runnable {
     private Follower follower;
     private Followee followee;
+    private SpreadConnection connection;
+    private Serializer serializer;
     private boolean signedIn;
 
-    public UserReceiver(Follower follower, Followee followee, boolean signedIn) {
+    public UserReceiver(Follower follower, Followee followee, SpreadConnection connection, Serializer serializer, boolean signedIn) {
         this.follower = follower;
         this.followee = followee;
+        this.connection = connection;
+        this.serializer = serializer;
         this.signedIn = signedIn;
     }
 
     @Override
     public void run() {
         while (this.signedIn) {
-            SpreadMessage message = this.connection.receive();
-            processMsg(message);
-            String sender = message.getSender().toString();
-            Msg msg = this.serializer.decode(message.getData());
-            switch (msg.getType()) {
-                case "POST":
-                    Post post = msg.getPosts().get(0);
-                    List<Post> posts = this.followees.get(sender);
-                    posts.add(post);
-                    this.followees.put(sender, posts);
-                    break;
-                case "POSTS":
-                    // TODO: Complete
-                    String private_group = message.getGroups()[0].toString();
-                    if (private_group.equals(sender)) {
-
-                    }
-                    else {
-
-                    }
+            try {
+                SpreadMessage message = this.connection.receive();
+                processMsg(message);
+            } catch (SpreadException e) {
+                e.printStackTrace();
+            } catch (InterruptedIOException e) {
+                e.printStackTrace();
             }
         }
     }
 
-    private void processMsg(SpreadMessage message) {
+    private void processMsg(SpreadMessage message) throws SpreadException {
         if (message.isRegular()) {
             processRegularMsg(message);
         }
         else {
             processMembershipMsg(message);
+        }
+    }
+
+    private void processRegularMsg(SpreadMessage message) throws SpreadException {
+        Msg msg = this.serializer.decode(message.getData());
+        switch (msg.getType()) {
+            case "POST":
+                follower.updatePosts(getUsername(message.getSender().toString()), msg.getPosts(), true, "POST");
+                break;
+            case "POSTS":
+                if (message.getMembershipInfo().getGroup().toString().split("Group")[0].equals(getUsername(message.getSender().toString()))) {
+                    follower.updatePosts(getUsername(message.getSender().toString()), msg.getPosts(), true, "POSTS");
+                }
+                else {
+                    // TODO: É suposto pedir posts a outro follower quando o follower lhe envia uma lista vazia de posts e status = OUTDATED?
+                    follower.updatePosts(message.getMembershipInfo().getGroup().toString().split("Group")[0], msg.getPosts(), msg.getStatus(), "POSTS");
+                }
+                break;
+            case "UPDATE":
+                Msg reply = new Msg();
+                reply.setType("POSTS");
+                Pair<Boolean, List<Post>> pair = follower.getPosts(getUsername(message.getMembershipInfo().getGroup().toString()));
+                reply.setPosts(pair.getSnd());
+                reply.setStatus(pair.getFst());
+                follower.sendMsg(reply, message.getSender().toString());
+                break;
+            default:
+                break;
         }
     }
 
