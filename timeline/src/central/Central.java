@@ -23,7 +23,8 @@ public class Central {
     private Serializer s;
     private String myAddress;
     private Map<String, Pair<Boolean, String>> superusers; // <Username, (Online, IP)>
-    private Map<String, Triple<String, String, Boolean>> users; // <Username, (Password, Online, IP)>
+    private Map<String, Triple<String, Boolean, String>> users; // <Username, (Password, Online, IP)>
+    private Pair<Boolean,String> waitingPromotion; // (Promoted, LoggedOutSuperuser)
 
     public Central(String myAddress) throws UnknownHostException, SpreadException {
         this.connection = new SpreadConnection();
@@ -82,6 +83,19 @@ public class Central {
                         break;
 
                     case "SUPERUSER":
+                        if (this.waitingPromotion != null && this.waitingPromotion.getFst()) {
+                            String loggedOutSuperuser = this.waitingPromotion.getSnd();
+
+                            Msg msg2 = new Msg();
+                            msg2.setType("SUPERUSER_UPDATE");
+                            msg2.setSuperuser(username);
+                            msg2.setSuperuserIp(msg.getSuperuserIp());
+                            sendMsg(msg2, loggedOutSuperuser+"SuperGroup");
+
+                            msg2.setType("DISCONNECT");
+                            sendMsg(msg2, this.superusers.get(loggedOutSuperuser).getSnd());
+                            this.waitingPromotion = null;
+                        }
                         String superuserIp = msg.getSuperuserIp();
                         this.superusers.put(username, new Pair(true, superuserIp));
                         break;
@@ -99,30 +113,34 @@ public class Central {
 
         // Caso existam superusers online
         if (this.superusers.values().stream().anyMatch(p -> p.getFst() == true)) {
-            msg2 = new Msg("SUPERUSER");
+            msg2 = new Msg();
+            msg2.setType("SUPERUSER");
 
             String superuser = getRandomSuperuser();
-            String superuserIp = this.superusers.get(superuser).getSnd();boolean
+            String superuserIp = this.superusers.get(superuser).getSnd();
 
             msg2.setSuperuser(superuser);
             msg2.setSuperuserIp(superuserIp);
             dest = message.getSender();
             sendMsg(msg2, dest);
         } else { // Caso contrário
-            msg2 = new Msg("PROMOTION");
+            msg2 = new Msg();
+            msg2.setType("PROMOTION");
             dest = message.getSender();
             sendMsg(msg2, dest);
         }
     }
 
     private void sendAck(SpreadMessage message) throws SpreadException {
-        Msg msg2 = new Msg("ACK");
+        Msg msg2 = new Msg();
+        msg2.setType("ACK");
         SpreadGroup dest = message.getSender();
         sendMsg(msg2, dest);
     }
 
     private void sendNack(SpreadMessage message) throws SpreadException {
-        Msg msg2 = new Msg("NACK");
+        Msg msg2 = new Msg();
+        msg2.setType("NACK");
         SpreadGroup dest = message.getSender();
         sendMsg(msg2, dest);
     }
@@ -135,31 +153,48 @@ public class Central {
         if (this.users.containsKey(username)) {
             sendNack(message);
         } else {
-            this.users.put(username, new Triple(password, ip, false));
+            this.users.put(username, new Triple(password, false, ip));
             sendAck(message);
         }
     }
 
     private void logoutFromUser(SpreadMessage message, String username) throws SpreadException {
-        this.users.put(username, new Triple(this.users.get(username).getFst(), "", false));
+        this.users.put(username, new Triple(this.users.get(username).getFst(), false, ""));
 
-        Msg msg2 = new Msg("DISCONNECT");
+        Msg msg2 = new Msg();
+        msg2.setType("DISCONNECT");
         sendMsg(msg2, message.getSender());
     }
 
     private void logoutFromSuperuser(SpreadMessage message, String username) throws SpreadException {
-        Msg msg2 = new Msg("SUPERUSER_UPDATE");
+        Msg msg2 = new Msg();
+        msg2.setType("SUPERUSER_UPDATE");
         this.superusers.put(username, new Pair(false, ""));
-        this.users.put(username, new Triple(this.users.get(username).getFst(), "", false));
-        String superuser = getRandomSuperuser();
-        String superuserIp = this.superusers.get(superuser).getSnd();
-        msg2.setSuperuser(superuser);
-        msg2.setSuperuserIp(superuserIp);
+        this.users.put(username, new Triple(this.users.get(username).getFst(), false, ""));
 
-        sendMsg(msg2,superuser+"SuperGroup");
+        if (this.superusers.values().stream().anyMatch(p -> p.getFst() == true)) {
+            String superuser = getRandomSuperuser();
+            String superuserIp = this.superusers.get(superuser).getSnd();
+            msg2.setSuperuser(superuser);
+            msg2.setSuperuserIp(superuserIp);
 
-        msg2.setType("DISCONNECT");
-        sendMsg(msg2, message.getSender());
+            sendMsg(msg2, superuser + "SuperGroup");
+
+            msg2.setType("DISCONNECT");
+            sendMsg(msg2, message.getSender());
+        } else {
+            msg2.setType("PROMOTION");
+            String user = getRandomUser();
+            sendMsg(msg2, user+"Group");
+
+            this.waitingPromotion = new Pair(true, username);
+
+            String userIp = this.users.get(user).getTrd();
+            msg2.setSuperuser(user);
+            msg2.setSuperuserIp(userIp);
+        }
+
+        //TODO: Ver caso em que o superuser que faz logout é o unico online
     }
 
     private void sendMsg(Msg msg2, String group) throws SpreadException {
@@ -184,14 +219,14 @@ public class Central {
     private String getRandomUser() {
         Random rand = new Random();
         List<String> online = this.users.entrySet().stream()
-                .filter(e -> !e.getValue().getTrd())
+                .filter(e -> !e.getValue().getSnd())
                 .map(e -> e.getKey())
                 .collect(Collectors.toList());
         int randomIndex = rand.nextInt(online.size());
         return online.get(randomIndex);
     }
 
-    private void sendMsg(Msg msg2, SpreadGroup dest) throws SpreadException {boolean
+    private void sendMsg(Msg msg2, SpreadGroup dest) throws SpreadException {
         SpreadMessage newMessage = new SpreadMessage();
         newMessage.setData(this.s.encode(msg2));
         newMessage.addGroup(dest);
