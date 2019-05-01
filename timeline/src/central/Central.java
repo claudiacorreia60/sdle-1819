@@ -57,24 +57,13 @@ public class Central {
                         signup(message, msg);
                         break;
 
-                    case "LOGIN":
+                    case "SIGNIN":
                         String password = msg.getPassword();
                         String ip = msg.getIp();
 
-                        if (this.users.containsKey(username) && password.equals(this.users.get(username).getFst())) {
-
-                            // Atualizar as estruturas caso seja User/Superuser
-                            if (this.superusers.containsKey(username)) {
-                                this.superusers.put(username, new Pair(true, ip));
-                            } else {
-                                this.users.put(username, new Triple(password, true, ip));
-                            }
-                            superuserAtribution(message);
-                        } else {
-                            sendNack(message);
-                        }
+                        login(message, username, password, ip);
                         break;
-                    case "LOGGED_OUT":
+                    case "SIGNOUT":
                         if(this.superusers.containsKey(username)) {
                             logoutFromSuperuser(message, username);
                         } else {
@@ -154,7 +143,23 @@ public class Central {
             sendNack(message);
         } else {
             this.users.put(username, new Triple(password, false, ip));
-            sendAck(message);
+
+            login(message, username, password, ip);
+        }
+    }
+
+    private void login(SpreadMessage message, String username, String password, String ip) throws SpreadException {
+        if (this.users.containsKey(username) && password.equals(this.users.get(username).getFst())) {
+
+            // Atualizar as estruturas caso seja User/Superuser
+            if (this.superusers.containsKey(username)) {
+                this.superusers.put(username, new Pair(true, ip));
+            } else {
+                this.users.put(username, new Triple(password, true, ip));
+            }
+            superuserAtribution(message);
+        } else {
+            sendNack(message);
         }
     }
 
@@ -194,7 +199,6 @@ public class Central {
             msg2.setSuperuserIp(userIp);
         }
 
-        //TODO: Ver caso em que o superuser que faz logout é o unico online
     }
 
     private void sendMsg(Msg msg2, String group) throws SpreadException {
