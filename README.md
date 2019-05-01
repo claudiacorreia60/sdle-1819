@@ -145,7 +145,7 @@ SUPERUSERIP: <superuser_ip>
 TYPE: SUPERUSER
 ```
 
-_ Sai do grupo do seu antigo superuser.
+- Sai do grupo do seu antigo superuser.
 
 #### Promoção a superuser
 - Recebe uma mensagem da central (```PROMOTION```)
@@ -157,7 +157,7 @@ TYPE: SUPERUSER
 ```
 
 #### Registo
-- Conecta-se à central e faz join ao grupo da central
+- Conecta-se à central
 - Manda uma mensagem do tipo ```SIGNUP``` para a central
 
 ```
@@ -165,6 +165,10 @@ TYPE: SIGNUP
 PASSWORD: <password>
 IP: <ip>
 ```
+- Pode receber uma das três respostas: 
+	- ```NACK```: o username que inseriu já existe
+	- ```SUPERUSER```: o sign in foi efetuado com sucesso, e é-lhe atribuído um superuser ao qual se deve conectar
+	- ```PROMOTION```: é o único nodo da rede, logo é automaticamente promovido a superuser, e mantém-se conectado ao seu próprio daemon
 
 #### Login
 - Conecta-se à central e faz join ao grupo da central
@@ -174,13 +178,10 @@ TYPE: SIGNIN
 PASSWORD: <password>
 IP: <ip>
 ```
-- Espera um _timeout_ e **ou**:
-	- Recebe mensagem com o IP do seu superuser (```SUPERUSER```) e atualiza a estrutura
-		- Junta-se ao grupo ```<superuser>SuperGroup```
-	- Recebe mensagem do tipo ```PROMOTION```:
-		- Faz [estes passos](#transforma%C3%A7%C3%A3o-em-superuser)
-		- 
-- Caso não receba dentro de um _timeout_ avisa o cliente com um erro "Login falhou, tente mais tarde".
+- Pode receber uma das três respostas: 
+	- ```NACK```: as credenciais que inseriu estão erradas
+	- ```SUPERUSER```: o sign in foi efetuado com sucesso, e é-lhe atribuído um superuser ao qual se deve conectar
+	- ```PROMOTION```: é o único nodo da rede, logo é automaticamente promovido a superuser, e mantém-se conectado ao seu próprio daemon
 
 #### Logout
 - Envia mensagem de logout para a central:
