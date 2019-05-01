@@ -54,7 +54,7 @@
 	```
 
 #### Login de um user
-- Ao receber a mensagem do tipo ```LOGIN```:
+- Ao receber a mensagem do tipo ```SIGNIN```:
 	- Caso as credenciais estejam erradas é-lhe enviada a seguinte mensagem:
 	```
 	TYPE: NACK
@@ -73,7 +73,7 @@
 
 #### Logout de um user
 
-- Ao receber a mensagem do tipo ```LOGGED_OUT``` e caso o user não seja um superuser:
+- Ao receber a mensagem do tipo ```SIGNOUT``` e caso o user não seja um superuser:
 	- Atualiza a estrutura com informação de que este está ```OFFLINE```
 	- Envia ao user um ack
 
@@ -82,7 +82,7 @@ TYPE: DISCONNECT
 ```
 
 #### Logout de um superuser
-- Ao receber a mensagem do tipo ```LOGGED_OUT```:
+- Ao receber a mensagem do tipo ```SIGNOUT```:
 	- Atualiza a estrutura com informação de que este está ```OFFLINE```
 	- Escolhe aleatoriamente um superuser
 	- Envia para o grupo daquele superuser o novo superuser que escolheu
@@ -168,7 +168,7 @@ IP: <ip>
 - Conecta-se à central e faz join ao grupo da central
 - Envia uma mensagem de login à central
 ```
-TYPE: LOGIN
+TYPE: SIGNIN
 PASSWORD: <password>
 IP: <ip>
 ```
@@ -184,7 +184,7 @@ IP: <ip>
 - Envia mensagem de logout para a central:
 
 ```
-TYPE: LOGGED_OUT
+TYPE: SIGNOUT
 ```
 
 - Aguarda o ```DISCONNECT``` da central
@@ -276,7 +276,7 @@ STATE: OUTDATED/UPDATED
 - Envia mensagem de logout para a central:
 
 ```
-TYPE: LOGGED_OUT
+TYPE: SIGNOUT
 ```
 
 - Aguarda o ```DISCONNECT``` da central
