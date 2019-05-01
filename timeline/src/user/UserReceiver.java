@@ -55,32 +55,41 @@ public class UserReceiver implements Runnable {
 
     private void processRegularMsg(SpreadMessage message) throws SpreadException {
         Msg msg = this.serializer.decode(message.getData());
+        String followee = message.getMembershipInfo().getGroup().toString().split("Group")[0];
         switch (msg.getType()) {
+            // Followee post
             case "POST":
-                follower.updatePosts(getUsername(message.getSender().toString()), msg.getPosts(), true, "POST");
+                this.follower.updatePosts(getUsername(message.getSender().toString()), msg.getPosts(), true, "POST");
                 break;
+            // Follower receives posts
             case "POSTS":
-                if (message.getMembershipInfo().getGroup().toString().split("Group")[0].equals(getUsername(message.getSender().toString()))) {
-                    follower.updatePosts(getUsername(message.getSender().toString()), msg.getPosts(), true, "POSTS");
+                // Received posts from the followee
+                if (followee.equals(getUsername(message.getSender().toString()))) {
+                    this.follower.updatePosts(getUsername(message.getSender().toString()), msg.getPosts(), true, "POSTS");
                 }
+                // Received posts from a follower
                 else {
-                    // TODO: É suposto pedir posts a outro follower quando o follower lhe envia uma lista vazia de posts e status = OUTDATED?
-                    follower.updatePosts(message.getMembershipInfo().getGroup().toString().split("Group")[0], msg.getPosts(), msg.getStatus(), "POSTS");
+                    this.follower.updatePosts(followee, msg.getPosts(), msg.getStatus(), "POSTS");
                 }
                 break;
+            // Follower requests posts
             case "UPDATE":
                 Msg reply = new Msg();
                 reply.setType("POSTS");
-                if (followee.getUsername().equals(message.getMembershipInfo().getGroup().toString().split("Group")[0])) {
-                    reply.setPosts(followee.getPosts(msg.getLastPostId()));
+                // I'm the followee
+                if (this.followee.getUsername().equals(followee)) {
+                    // Get my posts
+                    reply.setPosts(this.followee.getPosts(msg.getLastPostId()));
                     reply.setStatus(true);
-                    followee.sendMsg(reply, message.getSender().toString());
+                    this.followee.sendMsg(reply, message.getSender().toString());
                 }
+                // I'm a follower
                 else {
-                    Pair<Boolean, List<Post>> pair = follower.getPosts(message.getMembershipInfo().getGroup().toString().split("Group")[0], msg.getLastPostId());
+                    // Get followee's posts
+                    Pair<Boolean, List<Post>> pair = this.follower.getPosts(followee, msg.getLastPostId());
                     reply.setPosts(pair.getSnd());
                     reply.setStatus(pair.getFst());
-                    follower.sendMsg(reply, message.getSender().toString());
+                    this.follower.sendMsg(reply, message.getSender().toString());
                 }
                 break;
             default:
@@ -98,14 +107,14 @@ public class UserReceiver implements Runnable {
             // Followee login
             if (joinedUser.equals(followee)) {
                 // If this followees' posts are outdated, send request
-                if (! follower.checkPostsStatus(followee)) {
-                    follower.sendPostsRequest(message.getMembershipInfo().getJoined().toString());
+                if (! this.follower.checkPostsStatus(followee)) {
+                    this.follower.sendPostsRequest(message.getMembershipInfo().getJoined().toString());
                 }
             }
 
             // My login
-            else if (joinedUser.equals(follower.getUsername())){
-                follower.sendPostsRequest(selectMember(message, followee));
+            else if (joinedUser.equals(this.follower.getUsername())){
+                this.follower.sendPostsRequest(selectMember(message, followee));
             }
         }
     }

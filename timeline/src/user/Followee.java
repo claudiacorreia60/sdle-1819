@@ -6,7 +6,6 @@ import spread.SpreadException;
 import spread.SpreadGroup;
 import spread.SpreadMessage;
 import utils.Msg;
-import utils.Pair;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,20 +14,16 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class Followee {
-    private String myAddress;
     private String username;
-    private String password;
     private Map<Integer, Post> myPosts;
-    private boolean isSuperuser;
-    private String centralGroup;
     private Serializer serializer;
     private SpreadConnection connection;
     private SpreadGroup myGroup;
 
-    public Followee(String username, Map<Integer, Post> myPosts, String centralGroup, Serializer serializer, SpreadConnection connection) {
+    public Followee(String username, Serializer serializer, SpreadConnection connection) {
         this.username = username;
-        this.myPosts = myPosts;
-        this.centralGroup = centralGroup;
+        // TODO: Recuperar informação de um ficheiro
+        this.myPosts = new HashMap<>();
         this.serializer = serializer;
         this.connection = connection;
         this.myGroup = new SpreadGroup();

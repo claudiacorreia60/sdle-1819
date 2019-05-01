@@ -23,9 +23,10 @@ public class Follower {
     private Map<String, SpreadGroup> followeesGroups;
 
 
-    public Follower(String username, Map<String, Pair<Boolean, Map<Integer, Post>>> followees, Serializer serializer, SpreadConnection connection) {
+    public Follower(String username, Serializer serializer, SpreadConnection connection) {
         this.username = username;
-        this.followees = followees;
+        // TODO: Recuperar informação de um ficheiro
+        this.followees = new HashMap<>();
         this.serializer = serializer;
         this.connection = connection;
         this.followeesGroups = new HashMap<>();

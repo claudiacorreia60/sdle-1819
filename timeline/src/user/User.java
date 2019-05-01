@@ -6,28 +6,25 @@ import spread.SpreadException;
 import spread.SpreadGroup;
 import spread.SpreadMessage;
 import utils.Msg;
-import utils.Pair;
 
 import java.io.*;
 import java.net.InetAddress;
-import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.AbstractMap;
-import java.util.List;
-import java.util.Map;
+import java.util.Arrays;
 
 public class User {
     private String myAddress;
     private String username;
     private String password;
-    private Map<Integer, Post> myPosts;
-    private Map<String, Pair<Boolean, Map<Integer, Post>>> followees;
     private boolean isSuperuser;
     private Serializer serializer;
     private BufferedReader input;
     private SpreadConnection connection;
-    private SpreadGroup centralGroup;
+    private SpreadGroup superGroup;
     private boolean signedIn;
+    private Followee followee;
+    private Follower follower;
 
 
     public User() throws IOException, SpreadException {
@@ -51,54 +48,70 @@ public class User {
             read = this.input.readLine();
         }
         if (read.equals("1")) {
-            handleOption("SIGN IN");
+            checkCredentials("SIGN IN");
         }
         else {
-            handleOption("SIGN UP");
+            checkCredentials("SIGN UP");
         }
     }
 
-    public void handleOption (String choice) throws IOException, SpreadException {
-        Msg reply = null;
-
+    public void checkCredentials(String type) throws IOException, SpreadException {
+        Msg msg = null;
         String result = "NACK";
-        System.out.println("\n################## "+choice+" ###################");
+        System.out.println("\n################## "+type+" ###################");
         while (result.equals("NACK")) {
+            // Get login credentials
             System.out.print("> Username: ");
             this.username = this.input.readLine();
             System.out.print("> Password: ");
             this.password = this.input.readLine();
-            // Connect to central and send credentials
-            if (openSpreadConnection(centralAddress)) {
-                // Join central group
-                // TODO: É preciso juntar-se ao grupo para enviar uma mensagem unicast?
-                this.centralGroup = new SpreadGroup();
-                this.centralGroup.join(this.connection, "centralGroup");
-                Msg msg = new Msg();
-                //msg.setUsername(this.username);
-                msg.setPassword(this.password);
-                msg.setType(choice);
-                msg.setIp(this.myAddress);
-                sendMsg(msg, "#central#"+centralAddress);
-                // TODO: Colocar o timeout
-                SpreadMessage message = this.connection.receive();
-                reply = this.serializer.decode(message.getData());
-                result = reply.getType();
-            }
-            if (result.equals("NACK")) {
-                System.out.println("Error: Operation failed. Please try again.");
-            }
+            // Open spread connection
+            openSpreadConnection("localhost");
+            // Send message to central
+            msg = new Msg();
+            msg.setType(Arrays.toString(type.split(" ")));
+            msg.setPassword(this.password);
+            msg.setIp(this.myAddress);
+            sendMsg(msg, "centralGroup");
+            // Wait for central's reply
+            SpreadMessage message = this.connection.receive();
+            msg = this.serializer.decode(message.getData());
+            result = msg.getType();
         }
-        this.centralGroup.leave();
+
         this.signedIn = true;
-        openSpreadConnection(reply.getSuperuser());
+        this.followee = new Followee(this.username, this.serializer, this.connection);
+        this.follower = new Follower(this.username, this.serializer, this.connection);
+        handleCentralReply(msg);
     }
 
-    public boolean openSpreadConnection (String address) {
-        //TODO: o user vai fazer join ao grupo da central antes do login
-        // e depois vai fazer leave quando já tiver um superuser ao qual se conectar
-        // por isso já não vai precisar da variável centralGroup
-        boolean success = true;
+    public void handleCentralReply(Msg msg) {
+
+    }
+
+    public void promotion() throws SpreadException {
+        this.isSuperuser = true;
+        // Connect to superuser's group
+        this.superGroup = new SpreadGroup();
+        this.superGroup.join(this.connection, this.username+"SuperGroup");
+    }
+
+    public void updateSuperuser(String superuserIp, String superuser) throws SpreadException {
+        // Leave groups
+        this.follower.logout();
+        this.followee.logout();
+        // Disconnect from my daemon
+        this.connection.disconnect();
+        // Connect to superuser's daemon
+        openSpreadConnection(superuserIp);
+        // Connect to superuser's group
+        this.superGroup = new SpreadGroup();
+        this.superGroup.join(this.connection, superuser+"SuperGroup");
+
+    }
+
+
+    public void openSpreadConnection (String address) {
         try {
             this.connection = new SpreadConnection();
             this.connection.connect(
@@ -108,11 +121,7 @@ public class User {
                     false,
                     true);
         } catch (SpreadException e) {
-            success = false;
-        } catch (UnknownHostException e) {
-            success = false;
-        }
-        return success;
+        } catch (UnknownHostException e) {}
     }
 
 
