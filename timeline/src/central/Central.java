@@ -65,7 +65,7 @@ public class Central {
                         break;
                     case "SIGNOUT":
                         if(this.superusers.containsKey(username)) {
-                            logoutFromSuperuser(message, username);
+                            logoutFromSuperuser(username);
                         } else {
                             logoutFromUser(message, username);
                         }
@@ -120,13 +120,6 @@ public class Central {
         }
     }
 
-    private void sendAck(SpreadMessage message) throws SpreadException {
-        Msg msg2 = new Msg();
-        msg2.setType("ACK");
-        SpreadGroup dest = message.getSender();
-        sendMsg(msg2, dest);
-    }
-
     private void sendNack(SpreadMessage message) throws SpreadException {
         Msg msg2 = new Msg();
         msg2.setType("NACK");
@@ -163,15 +156,11 @@ public class Central {
         }
     }
 
-    private void logoutFromUser(SpreadMessage message, String username) throws SpreadException {
+    private void logoutFromUser(SpreadMessage message, String username) {
         this.users.put(username, new Triple(this.users.get(username).getFst(), false, ""));
-
-        Msg msg2 = new Msg();
-        msg2.setType("DISCONNECT");
-        sendMsg(msg2, message.getSender());
     }
 
-    private void logoutFromSuperuser(SpreadMessage message, String username) throws SpreadException {
+    private void logoutFromSuperuser(String username) throws SpreadException {
         Msg msg2 = new Msg();
         msg2.setType("SUPERUSER_UPDATE");
         this.superusers.put(username, new Pair(false, ""));
@@ -184,9 +173,6 @@ public class Central {
             msg2.setSuperuserIp(superuserIp);
 
             sendMsg(msg2, superuser + "SuperGroup");
-
-            msg2.setType("DISCONNECT");
-            sendMsg(msg2, message.getSender());
         } else {
             msg2.setType("PROMOTION");
             String user = getRandomUser();
