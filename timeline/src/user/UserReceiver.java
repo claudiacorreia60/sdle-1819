@@ -71,7 +71,7 @@ public class UserReceiver implements Runnable {
             case "UPDATE":
                 Msg reply = new Msg();
                 reply.setType("POSTS");
-                Pair<Boolean, List<Post>> pair = follower.getPosts(getUsername(message.getMembershipInfo().getGroup().toString()));
+                Pair<Boolean, List<Post>> pair = follower.getPosts(getUsername(message.getMembershipInfo().getGroup().toString()), msg.getLastPostId());
                 reply.setPosts(pair.getSnd());
                 reply.setStatus(pair.getFst());
                 follower.sendMsg(reply, message.getSender().toString());

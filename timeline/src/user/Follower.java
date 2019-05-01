@@ -12,6 +12,7 @@ import utils.Pair;
 
 import java.io.InterruptedIOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 public class Follower {
@@ -108,9 +109,11 @@ public class Follower {
         this.followees.put(followee, pair);
     }
 
-    public Pair<Boolean, List<Post>> getPosts(String followee) {
+    public Pair<Boolean, List<Post>> getPosts(String followee, int lastPostId) {
         List<Post> posts = new ArrayList<>(this.followees.get(followee).getSnd().values());
-        Pair<Boolean, List<Post>> pair = new Pair<>(this.followees.get(followee).getFst(), posts);
+        List<Post> requestedPosts = posts.stream().filter(post -> post.getId() > lastPostId)
+                .collect(Collectors.toList());
+        Pair<Boolean, List<Post>> pair = new Pair<>(this.followees.get(followee).getFst(), requestedPosts);
         return pair;
     }
 
