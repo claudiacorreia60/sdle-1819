@@ -71,10 +71,17 @@ public class UserReceiver implements Runnable {
             case "UPDATE":
                 Msg reply = new Msg();
                 reply.setType("POSTS");
-                Pair<Boolean, List<Post>> pair = follower.getPosts(getUsername(message.getMembershipInfo().getGroup().toString()), msg.getLastPostId());
-                reply.setPosts(pair.getSnd());
-                reply.setStatus(pair.getFst());
-                follower.sendMsg(reply, message.getSender().toString());
+                if (followee.getUsername().equals(message.getMembershipInfo().getGroup().toString().split("Group")[0])) {
+                    reply.setPosts(followee.getPosts(msg.getLastPostId()));
+                    reply.setStatus(true);
+                    followee.sendMsg(reply, message.getSender().toString());
+                }
+                else {
+                    Pair<Boolean, List<Post>> pair = follower.getPosts(message.getMembershipInfo().getGroup().toString().split("Group")[0], msg.getLastPostId());
+                    reply.setPosts(pair.getSnd());
+                    reply.setStatus(pair.getFst());
+                    follower.sendMsg(reply, message.getSender().toString());
+                }
                 break;
             default:
                 break;

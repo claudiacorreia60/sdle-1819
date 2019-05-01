@@ -6,11 +6,13 @@ import spread.SpreadException;
 import spread.SpreadGroup;
 import spread.SpreadMessage;
 import utils.Msg;
+import utils.Pair;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class Followee {
     private String myAddress;
@@ -66,6 +68,12 @@ public class Followee {
         }
     }
 
+    public List<Post> getPosts(int lastPostId) {
+        List<Post> requestedPosts = this.myPosts.values().stream().filter(post -> post.getId() > lastPostId)
+                .collect(Collectors.toList());
+        return requestedPosts;
+    }
+
     public void post(Post post){
         Msg msg = new Msg();
         msg.setType("POST");
@@ -85,7 +93,7 @@ public class Followee {
         // TODO: fazer leave do meu grupo
     }
 
-    private void sendMsg(Msg m, String group) throws SpreadException {
+    public void sendMsg(Msg m, String group) throws SpreadException {
         SpreadMessage message = new SpreadMessage();
 
         message.setData(this.serializer.encode(m));
@@ -94,5 +102,9 @@ public class Followee {
         message.setReliable();
 
         connection.multicast(message);
+    }
+
+    public String getUsername() {
+        return this.username;
     }
 }
