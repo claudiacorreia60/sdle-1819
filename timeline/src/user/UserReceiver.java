@@ -1,7 +1,5 @@
 package user;
 
-import io.atomix.utils.serializer.Serializer;
-import spread.SpreadConnection;
 import spread.SpreadException;
 import spread.SpreadGroup;
 import spread.SpreadMessage;
@@ -15,26 +13,21 @@ import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-public class UserReceiver implements Runnable {
-    private Follower follower;
-    private Followee followee;
-    private SpreadConnection connection;
-    private Serializer serializer;
-    private boolean signedIn;
+//TODO: Passar os métodos da UserReceive para a User
 
-    public UserReceiver(Follower follower, Followee followee, SpreadConnection connection, Serializer serializer, boolean signedIn) {
-        this.follower = follower;
-        this.followee = followee;
-        this.connection = connection;
-        this.serializer = serializer;
-        this.signedIn = signedIn;
+public class UserReceiver implements Runnable {
+    private User user;
+    private int connectedUsers;
+
+    public UserReceiver(User user) {
+        this.user = user;
     }
 
     @Override
     public void run() {
-        while (this.signedIn) {
+        while (this.user.isSignedIn()) {
             try {
-                SpreadMessage message = this.connection.receive();
+                SpreadMessage message = this.user.getConnection().receive();
                 processMsg(message);
             } catch (SpreadException e) {
                 e.printStackTrace();
@@ -44,7 +37,7 @@ public class UserReceiver implements Runnable {
         }
     }
 
-    private void processMsg(SpreadMessage message) throws SpreadException {
+    private void processMsg(SpreadMessage message) throws SpreadException, InterruptedIOException {
         if (message.isRegular()) {
             processRegularMsg(message);
         }
@@ -53,23 +46,23 @@ public class UserReceiver implements Runnable {
         }
     }
 
-    private void processRegularMsg(SpreadMessage message) throws SpreadException {
-        Msg msg = this.serializer.decode(message.getData());
+    private void processRegularMsg(SpreadMessage message) throws SpreadException, InterruptedIOException {
+        Msg msg = this.user.getSerializer().decode(message.getData());
         String followee = message.getMembershipInfo().getGroup().toString().split("Group")[0];
         switch (msg.getType()) {
             // Followee post
             case "POST":
-                this.follower.updatePosts(getUsername(message.getSender().toString()), msg.getPosts(), true, "POST");
+                this.user.getFollower().updatePosts(getUsername(message.getSender().toString()), msg.getPosts(), true, "POST");
                 break;
             // Follower receives posts
             case "POSTS":
                 // Received posts from the followee
                 if (followee.equals(getUsername(message.getSender().toString()))) {
-                    this.follower.updatePosts(getUsername(message.getSender().toString()), msg.getPosts(), true, "POSTS");
+                    this.user.getFollower().updatePosts(getUsername(message.getSender().toString()), msg.getPosts(), true, "POSTS");
                 }
                 // Received posts from a follower
                 else {
-                    this.follower.updatePosts(followee, msg.getPosts(), msg.getStatus(), "POSTS");
+                    this.user.getFollower().updatePosts(followee, msg.getPosts(), msg.getStatus(), "POSTS");
                 }
                 break;
             // Follower requests posts
@@ -77,44 +70,61 @@ public class UserReceiver implements Runnable {
                 Msg reply = new Msg();
                 reply.setType("POSTS");
                 // I'm the followee
-                if (this.followee.getUsername().equals(followee)) {
+                if (this.user.getFollowee().getUsername().equals(followee)) {
                     // Get my posts
-                    reply.setPosts(this.followee.getPosts(msg.getLastPostId()));
+                    reply.setPosts(this.user.getFollowee().getPosts(msg.getLastPostId()));
                     reply.setStatus(true);
-                    this.followee.sendMsg(reply, message.getSender().toString());
+                    this.user.getFollowee().sendMsg(reply, message.getSender().toString());
                 }
                 // I'm a follower
                 else {
                     // Get followee's posts
-                    Pair<Boolean, List<Post>> pair = this.follower.getPosts(followee, msg.getLastPostId());
+                    Pair<Boolean, List<Post>> pair = this.user.getFollower().getPosts(followee, msg.getLastPostId());
                     reply.setPosts(pair.getSnd());
                     reply.setStatus(pair.getFst());
-                    this.follower.sendMsg(reply, message.getSender().toString());
+                    this.user.getFollower().sendMsg(reply, message.getSender().toString());
                 }
                 break;
+            // User gets promoted to superuser
+            case "PROMOTION":
+                this.user.promotion();
+            // Superuser update
+            case "SUPERUSER":
+                this.user.updateSuperuser(msg.getSuperuserIp(), msg.getSuperuser());
             default:
                 break;
         }
     }
 
     private void processMembershipMsg(SpreadMessage message) throws SpreadException {
-        // Find which followee group originated the message
-        String followee = message.getMembershipInfo().getGroup().toString().split("Group")[0];
+        if(! this.user.isPrepareSignOut()) {
+            // Find which followee group originated the message
+            String followee = message.getMembershipInfo().getGroup().toString().split("Group")[0];
 
-        if (message.getMembershipInfo().isCausedByJoin()) {
-            String joinedUser = getUsername(message.getMembershipInfo().getJoined().toString());
+            if (message.getMembershipInfo().isCausedByJoin()) {
+                String joinedUser = getUsername(message.getMembershipInfo().getJoined().toString());
 
-            // Followee login
-            if (joinedUser.equals(followee)) {
-                // If this followees' posts are outdated, send request
-                if (! this.follower.checkPostsStatus(followee)) {
-                    this.follower.sendPostsRequest(message.getMembershipInfo().getJoined().toString());
+                // Followee signIn
+                if (joinedUser.equals(followee)) {
+                    // If this followees' posts are outdated, send request
+                    if (!this.user.getFollower().checkPostsStatus(followee)) {
+                        this.user.getFollower().sendPostsRequest(message.getMembershipInfo().getJoined().toString());
+                    }
+                }
+
+                // My signIn
+                else if (joinedUser.equals(this.user.getFollower().getUsername())) {
+                    this.user.getFollower().sendPostsRequest(selectMember(message, followee));
                 }
             }
+        }
+        // Super user is preparing to sign out
+        else{
+            this.connectedUsers = message.getMembershipInfo().getMembers().length;
 
-            // My login
-            else if (joinedUser.equals(this.follower.getUsername())){
-                this.follower.sendPostsRequest(selectMember(message, followee));
+            if(this.connectedUsers == 1){
+                this.user.getSuperGroup().leave();
+                this.user.setSignedIn(false);
             }
         }
     }

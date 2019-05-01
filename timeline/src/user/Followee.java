@@ -15,9 +15,9 @@ import java.util.stream.Collectors;
 
 public class Followee {
     private String username;
-    private Map<Integer, Post> myPosts;
     private Serializer serializer;
     private SpreadConnection connection;
+    private Map<Integer, Post> myPosts;
     private SpreadGroup myGroup;
 
     public Followee(String username, Serializer serializer, SpreadConnection connection) {
@@ -29,7 +29,7 @@ public class Followee {
         this.myGroup = new SpreadGroup();
     }
 
-    public void login(){
+    public void signIn(){
         try {
             this.myGroup.join(this.connection, this.username);
         } catch (SpreadException e) {
@@ -84,8 +84,9 @@ public class Followee {
         }
     }
 
-    public void logout(){
-        // TODO: fazer leave do meu grupo
+    public void signOut() throws SpreadException {
+        // Leave my group
+        this.myGroup.leave();
     }
 
     public void sendMsg(Msg m, String group) throws SpreadException {
