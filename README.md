@@ -45,7 +45,9 @@
 - Ao receber a mensagem do tipo ```SIGNUP```:
 	- Se o username ainda não existir:
 	```
-	TYPE: ACK
+	SUPERUSER: <superuser>
+	SUPERUSERIP: <superuser_ip>
+	TYPE: SUPERUSER
 	```
 
 	- Se o username já existir:
@@ -75,7 +77,7 @@
 
 - Ao receber a mensagem do tipo ```SIGNOUT``` e caso o user não seja um superuser:
 	- Atualiza a estrutura com informação de que este está ```OFFLINE```
-	- Envia ao user um ack
+	- Envia ao user um disconnect
 
 ```
 TYPE: DISCONNECT
