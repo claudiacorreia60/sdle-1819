@@ -77,11 +77,6 @@
 
 - Ao receber a mensagem do tipo ```SIGNOUT``` e caso o user não seja um superuser:
 	- Atualiza a estrutura com informação de que este está ```OFFLINE```
-	- Envia ao user um disconnect
-
-```
-TYPE: DISCONNECT
-```
 
 #### Logout de um superuser
 - Ao receber a mensagem do tipo ```SIGNOUT```:
@@ -93,12 +88,6 @@ TYPE: DISCONNECT
 SUPERUSERIP: <superuser_private_ip>
 SUPERUSER: <superuser>
 TYPE: SUPERUSER_UPDATE
-```
-
-- Envia ao superuser um ack
-
-```
-TYPE: DISCONNECT
 ```
 
 #### Atribuição de estado de superuser
@@ -190,7 +179,7 @@ IP: <ip>
 TYPE: SIGNOUT
 ```
 
-- Aguarda o ```DISCONNECT``` da central
+- Aguarda que todos os users saiam do seu super group para poder terminar
 
 ## Followee
 	
