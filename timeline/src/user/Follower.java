@@ -1,12 +1,9 @@
 package user;
 
 import io.atomix.utils.serializer.Serializer;
-
-import org.omg.PortableServer.POA;
 import spread.SpreadConnection;
 import spread.SpreadException;
 import spread.SpreadGroup;
-
 import spread.SpreadMessage;
 import utils.Msg;
 import utils.Pair;
@@ -92,24 +89,42 @@ public class Follower {
     }
 
     public boolean checkPostsStatus(String followee) {
-        return this.followees.get(followee).getFst();
+        Pair<Boolean, Map<Integer, Post>> p = this.followees.get(followee);
+        if (p != null) {
+            return p.getFst();
+        } else {
+            return false;
+        }
     }
 
     public void updatePosts(String followee, List<Post> posts, boolean postsStatus, String type) {
         Pair<Boolean, Map<Integer, Post>> pair = this.followees.get(followee);
-        Map<Integer, Post> followeePosts = pair.getSnd();
+        boolean myPost = true;
+        Map<Integer, Post> followeePosts = null;
+
+        if (pair != null) {
+            myPost = false;
+            followeePosts = pair.getSnd();
+        }
         for (Post post : posts) {
-            followeePosts.put(post.getId(), post);
-            System.out.println("################## NEW POST ##################");
+            // Save followee's post
+            if (!myPost) {
+                followeePosts.put(post.getId(), post);
+            }
+            System.out.println("\n################## NEW POST ##################");
             System.out.println("FROM: "+followee);
-            System.out.println("DATE: "+post.getDate().toString());
+            System.out.println("DATE: "+post.getDate().getTime().toString());
             System.out.println("POST: "+post.getContent());
         }
-        if (type.equals("POSTS")) {
-            pair.setFst(postsStatus);
+
+        if(!myPost) {
+            // Update status of the list of posts
+            if (type.equals("POSTS")) {
+                pair.setFst(postsStatus);
+            }
+            pair.setSnd(followeePosts);
+            this.followees.put(followee, pair);
         }
-        pair.setSnd(followeePosts);
-        this.followees.put(followee, pair);
     }
 
     public Pair<Boolean, List<Post>> getPosts(String followee, int lastPostId) {

@@ -31,16 +31,17 @@ public class Followee {
         this.myGroup = new SpreadGroup();
         this.input = input;
         this.user = user;
-
-        // Make posts/Logout
-        timelineMenu();
     }
 
-    public void signIn(){
+    public void signIn() throws IOException {
         try {
-            this.myGroup.join(this.connection, this.username);
+            // Join my own followee group
+            this.myGroup.join(this.connection, this.username + "Group");
             // Delete posts older than 5 minutes
             filterPosts(5, "minute");
+
+            // Make posts/Logout menu
+            timelineMenu();
         } catch (SpreadException e) {
             e.printStackTrace();
         }
@@ -79,8 +80,9 @@ public class Followee {
     }
 
     public void timelineMenu() throws IOException, SpreadException {
+        // TODO: Meter opção de FOLLOW E UNFOLLOW
         while (this.user.isSignedIn()) {
-            System.out.println("#################### MENU ####################");
+            System.out.println("\n#################### MENU ####################");
             System.out.println("       (1) Post       |      (2) Sign out     ");
             String read = this.input.readLine();
             while (!read.equals("1") && !read.equals("2")) {
@@ -90,12 +92,17 @@ public class Followee {
             if (read.equals("1")) {
                 post();
             } else {
-                signOut();
+                if (this.user.isSuperuser()) {
+                    this.user.superuserSignOut();
+                } else {
+                    this.user.signOut();
+                }
             }
         }
     }
 
     public void post() throws IOException {
+        System.out.println("\nWrite your post:");
         String content = this.input.readLine();
         // Get current date
         Calendar date = Calendar.getInstance();
@@ -109,7 +116,12 @@ public class Followee {
     }
 
     private int postId() {
-        return Collections.max(this.myPosts.keySet()) + 1;
+        if (this.myPosts.isEmpty()) {
+            return 0;
+        }
+        else {
+            return Collections.max(this.myPosts.keySet()) + 1;
+        }
     }
 
     public void sendPost(Post post){
@@ -129,12 +141,16 @@ public class Followee {
 
     private void filterPosts(int time, String unit) {
         Post post = this.myPosts.get(postId());
-        // Delete old posts
-        this.myPosts = this.myPosts.entrySet().stream()
-                .filter(x -> validateDate(x.getValue().getDate(), time, unit))
-                .collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue()));
-        if (this.myPosts.isEmpty()) {
-            this.myPosts.put(post.getId(), post);
+
+        // There are no posts
+        if (post != null) {
+            // Delete old posts
+            this.myPosts = this.myPosts.entrySet().stream()
+                    .filter(x -> validateDate(x.getValue().getDate(), time, unit))
+                    .collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue()));
+            if (this.myPosts.isEmpty()) {
+                this.myPosts.put(post.getId(), post);
+            }
         }
     }
 

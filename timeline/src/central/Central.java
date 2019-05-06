@@ -5,6 +5,7 @@ import spread.SpreadConnection;
 import spread.SpreadException;
 import spread.SpreadGroup;
 import spread.SpreadMessage;
+import user.Post;
 import utils.Msg;
 import utils.Pair;
 import utils.Triple;
@@ -12,10 +13,7 @@ import utils.Triple;
 import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Central {
@@ -31,7 +29,8 @@ public class Central {
         this.s = Serializer.builder()
                 .withTypes(
                         Msg.class,
-                        Pair.class)
+                        Post.class,
+                        GregorianCalendar.class)
                 .build();
         this.myAddress = myAddress;
         this.superusers = new HashMap<>();
@@ -152,6 +151,7 @@ public class Central {
                 this.users.put(username, new Triple(password, true, ip));
             }
             superuserAtribution(message);
+            System.out.println(username + " signed in!");
         } else {
             sendNack(message);
         }

@@ -30,9 +30,40 @@ public class User {
     private boolean prepareSignOut;
     private Followee followee;
     private Follower follower;
+    private int connectedUsers;
     private long startTime;
     private long averageUpTime;
     private long totalSignIns;
+
+    public User(String myAddress) throws IOException, SpreadException {
+        this.myAddress = myAddress;
+        this.serializer = Serializer.builder()
+                .withTypes(
+                        Msg.class,
+                        Post.class,
+                        GregorianCalendar.class)
+                .build();
+        this.input = new BufferedReader(new InputStreamReader(System.in));
+        this.superGroup = null;
+        this.signedIn = false;
+        this.prepareSignOut = false;
+        this.startTime = System.nanoTime();
+        this.averageUpTime = 0; //TODO: Persistência
+        this.totalSignIns = 0; //TODO: Persistência
+        this.connectedUsers = 0;
+
+        // Timer that transforms the User into a Super-user after 2 days of current uptime
+        // TODO: Persistência
+        if (this.averageUpTime == 0) {
+            SUTransform t = new SUTransform(this);
+            new Timer().schedule(t, 172800*1000);
+        } else if (this.averageUpTime >= 1.728e+14) {
+            this.isSuperuser = true;
+        }
+
+        // Sign in/Sign up
+        initialMenu();
+    }
 
     public void setSuperuser(boolean superuser) {
         isSuperuser = superuser;
@@ -78,32 +109,6 @@ public class User {
         this.signedIn = signedIn;
     }
 
-    public User(String myAddress) throws IOException, SpreadException {
-        this.myAddress = myAddress;
-        this.serializer = Serializer.builder()
-                .withTypes(
-                        Msg.class)
-                .build();
-        this.input = new BufferedReader(new InputStreamReader(System.in));
-        this.superGroup = null;
-        this.signedIn = false;
-        this.prepareSignOut = false;
-        this.startTime = System.nanoTime();
-        this.averageUpTime = 0; //TODO: Persistência
-        this.totalSignIns = 0; //TODO: Persistência
-
-        // Timer that transforms the User into a Super-user after 2 days of current uptime
-        // TODO: Persistência
-        if (this.averageUpTime == 0) {
-            SUTransform t = new SUTransform(this);
-            new Timer().schedule(t, 172800*1000);
-        } else if (this.averageUpTime >= 1.728e+14) {
-            this.isSuperuser = true;
-        }
-
-        // Sign in/Sign up
-        initialMenu();
-    }
 
     public void initialMenu() throws IOException, SpreadException {
         System.out.println("#################### MENU ####################");
@@ -135,7 +140,8 @@ public class User {
             openSpreadConnection("localhost");
             // Send message to central
             msg = new Msg();
-            msg.setType(Arrays.toString(type.split(" ")));
+            String[] tokens = type.split(" ");
+            msg.setType(tokens[0] + tokens[1]);
             msg.setPassword(this.password);
             msg.setIp(this.myAddress);
             sendMsg(msg, "centralGroup");
@@ -145,15 +151,13 @@ public class User {
             result = msg.getType();
         }
 
-        this.followee = new Followee(this.username, this.serializer, this.connection, this.input, this);
         this.follower = new Follower(this.username, this.serializer, this.connection);
+        this.followee = new Followee(this.username, this.serializer, this.connection, this.input, this);
 
         handleCentralReply(msg);
 
         // Sign in
         this.signedIn = true;
-        this.follower.signIn();
-        this.followee.signIn();
         this.totalSignIns += 1;
 
         // Initialize UserReceiver thread
@@ -161,6 +165,8 @@ public class User {
         Thread t = new Thread(ur);
         t.start();
 
+        this.follower.signIn();
+        this.followee.signIn();
     }
 
     public void handleCentralReply(Msg msg) throws SpreadException, InterruptedIOException {
@@ -226,6 +232,8 @@ public class User {
         long endTime = System.nanoTime();
         this.averageUpTime = (endTime - this.startTime)/this.totalSignIns;
 
+        System.exit(0);
+
         //TODO: Persistir as coisas que devem ser persistidas
     }
 
@@ -239,8 +247,15 @@ public class User {
         this.followee.signOut();
         this.follower.signOut();
 
-        // Wait for all users to leave the super group
-        this.prepareSignOut = true;
+        if(this.connectedUsers == 1) {
+            this.superGroup.leave();
+            this.signedIn = false;
+
+            System.exit(0);
+        } else {
+            // Wait for all users to leave the super group
+            this.prepareSignOut = true;
+        }
     }
 
     public void sendMsg(Msg m, String group) throws SpreadException {
@@ -283,7 +298,8 @@ public class User {
 
     private void processRegularMsg(SpreadMessage message) throws SpreadException, InterruptedIOException {
         Msg msg = this.serializer.decode(message.getData());
-        String followee = message.getMembershipInfo().getGroup().toString().split("Group")[0];
+        String followee = message.getGroups()[0].toString().split("Group")[0];
+
         switch (msg.getType()) {
             // Followee post
             case "POST":
@@ -332,10 +348,34 @@ public class User {
     }
 
     private void processMembershipMsg(SpreadMessage message) throws SpreadException {
-        if(! this.prepareSignOut) {
-            // Find which followee group originated the message
-            String followee = message.getMembershipInfo().getGroup().toString().split("Group")[0];
+        boolean isSuperGroup = message.getMembershipInfo().getGroup().toString().contains("SuperGroup");
 
+            if (! this.prepareSignOut && ! isSuperGroup) {
+                processGroupMsg(message);
+            }
+            // Super user is preparing to sign out
+            if (isSuperGroup){
+                processSuperGroupMsg(message);
+            }
+    }
+
+    private void processSuperGroupMsg(SpreadMessage message) throws SpreadException {
+        this.connectedUsers = message.getMembershipInfo().getMembers().length;
+
+        if (this.isPrepareSignOut() && this.connectedUsers == 1) {
+            this.superGroup.leave();
+            this.signedIn = false;
+
+            System.exit(0);
+        }
+    }
+
+    private void processGroupMsg(SpreadMessage message) throws SpreadException {
+        // Find which followee group originated the message
+        String followee = message.getMembershipInfo().getGroup().toString().split("Group")[0];
+
+        // Followee doesn't request posts
+        if (!followee.equals(this.username)) {
             if (message.getMembershipInfo().isCausedByJoin()) {
                 String joinedUser = getUsername(message.getMembershipInfo().getJoined().toString());
 
@@ -348,18 +388,9 @@ public class User {
                 }
 
                 // My signIn
-                else if (joinedUser.equals(this.follower.getUsername())) {
+                else if (joinedUser.equals(this.username)) {
                     this.follower.sendPostsRequest(selectMember(message, followee));
                 }
-            }
-        }
-        // Super user is preparing to sign out
-        else {
-            int connectedUsers = message.getMembershipInfo().getMembers().length;
-
-            if(connectedUsers == 1){
-                this.superGroup.leave();
-                this.signedIn = false;
             }
         }
     }
