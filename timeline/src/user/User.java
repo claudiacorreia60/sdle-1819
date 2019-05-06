@@ -53,9 +53,6 @@ public class User {
         this.connectedUsers = 0;
         this.connection = new SpreadConnection();
 
-        // Open spread connection
-        openSpreadConnection("localhost");
-
         // Timer that transforms the User into a Super-user after 2 days of current uptime
         // TODO: Persistência
         if (this.averageUpTime == 0) {
@@ -143,6 +140,8 @@ public class User {
             this.username = this.input.readLine();
             System.out.print("> Password: ");
             this.password = this.input.readLine();
+            // Open spread connection
+            openSpreadConnection("localhost");
             // Send message to central
             msg = new Msg();
             String[] tokens = type.split(" ");
@@ -164,8 +163,6 @@ public class User {
         // Sign in
         this.signedIn = true;
         this.totalSignIns += 1;
-        this.follower.signIn();
-        this.followee.signIn();
 
         // Initialize UserReceiver thread
         UserReceiver ur = new UserReceiver(this);
@@ -177,7 +174,7 @@ public class User {
     }
 
     public void timelineMenu() throws IOException, SpreadException {
-        while (this.signedIn) {
+        while (this.signedIn && ! this.prepareSignOut) {
             System.out.println("\n#################### MENU ####################");
             System.out.println("#                  (1) Post                  #");
             System.out.println("#                 (2) Follow                 #");
@@ -213,9 +210,8 @@ public class User {
         }
     }
 
-    public void handleCentralReply(Msg msg) throws SpreadException, InterruptedIOException {
+    public void handleCentralReply(Msg msg) throws SpreadException, IOException {
         if(msg.getType().equals("PROMOTION")){
-            System.out.println("Central reply");
             promotion();
         }
         else {
@@ -223,7 +219,7 @@ public class User {
         }
     }
 
-    public void promotion() throws SpreadException {
+    public void promotion() throws SpreadException, IOException {
         // TODO: mudar o ficheiro de configuração
         // Disconnect from my daemon
         this.connection.disconnect();
@@ -232,9 +228,12 @@ public class User {
         // Connect to superuser's group
         this.superGroup = new SpreadGroup();
         this.superGroup.join(this.connection, this.username+"SuperGroup");
+        // Join groups
+        this.follower.signIn();
+        this.followee.signIn();
     }
 
-    public void updateSuperuser(String superuserIp, String superuser) throws SpreadException, InterruptedIOException {
+    public void updateSuperuser(String superuserIp, String superuser) throws SpreadException, IOException {
         // Leave groups
         disconnect();
         // Disconnect from my daemon
@@ -244,6 +243,9 @@ public class User {
         // Connect to superuser's group
         this.superGroup = new SpreadGroup();
         this.superGroup.join(this.connection, superuser+"SuperGroup");
+        // Join groups
+        this.follower.signIn();
+        this.followee.signIn();
     }
 
     public void openSpreadConnection (String address) {
@@ -345,7 +347,7 @@ public class User {
         this.superGroup.join(this.connection, this.username + "SuperGroup");
     }
 
-    public void processMsg(SpreadMessage message) throws SpreadException, InterruptedIOException {
+    public void processMsg(SpreadMessage message) throws SpreadException, IOException {
         if (message.isRegular()) {
             processRegularMsg(message);
         }
@@ -354,7 +356,7 @@ public class User {
         }
     }
 
-    private void processRegularMsg(SpreadMessage message) throws SpreadException, InterruptedIOException {
+    private void processRegularMsg(SpreadMessage message) throws SpreadException, IOException {
         Msg msg = this.serializer.decode(message.getData());
         String followee = msg.getFollowee();
 
@@ -398,7 +400,6 @@ public class User {
                 break;
             // User gets promoted to superuser
             case "PROMOTION":
-                System.out.println("PROMOTION: " + msg.getSuperuserIp() + " " + msg.getSuperuser());
                 promotion();
                 // Superuser update
             case "SUPERUSER":

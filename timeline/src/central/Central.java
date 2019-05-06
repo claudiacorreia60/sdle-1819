@@ -214,7 +214,7 @@ public class Central {
     private String getRandomUser() {
         Random rand = new Random();
         List<String> online = this.users.entrySet().stream()
-                .filter(e -> !e.getValue().getSnd())
+                .filter(e -> e.getValue().getSnd())
                 .map(e -> e.getKey())
                 .collect(Collectors.toList());
         int randomIndex = rand.nextInt(online.size());

@@ -6,6 +6,7 @@ import spread.SpreadMessage;
 import utils.Msg;
 import utils.Pair;
 
+import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Arrays;
 import java.util.List;
@@ -29,6 +30,8 @@ public class UserReceiver implements Runnable {
             } catch (SpreadException e) {
                 e.printStackTrace();
             } catch (InterruptedIOException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
                 e.printStackTrace();
             }
         }
