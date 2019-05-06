@@ -6,14 +6,14 @@ import spread.SpreadException;
 import spread.SpreadGroup;
 import spread.SpreadMessage;
 import utils.Msg;
+import utils.Pair;
 
 import java.io.*;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.AbstractMap;
-import java.util.Arrays;
+import java.util.*;
+import java.util.stream.Collectors;
 
-//TODO: passar os métodos sendMsg, getUsername, etc para uma superclasse
 
 public class User {
     private String myAddress;
@@ -65,18 +65,18 @@ public class User {
         this.myAddress = myAddress;
         this.serializer = Serializer.builder()
                 .withTypes(
-                        Msg.class,
-                        AbstractMap.SimpleEntry.class)
+                        Msg.class)
                 .build();
         this.input = new BufferedReader(new InputStreamReader(System.in));
         this.superGroup = null;
         this.signedIn = false;
         this.prepareSignOut = false;
 
-        menu();
+        // Sign in/Sign up
+        initialMenu();
     }
 
-    public void menu() throws IOException, SpreadException {
+    public void initialMenu() throws IOException, SpreadException {
         System.out.println("#################### MENU ####################");
         System.out.println("      (1) Sign in      |      (2) Sign up     ");
         String read = this.input.readLine();
@@ -116,7 +116,7 @@ public class User {
             result = msg.getType();
         }
 
-        this.followee = new Followee(this.username, this.serializer, this.connection);
+        this.followee = new Followee(this.username, this.serializer, this.connection, this.input, this);
         this.follower = new Follower(this.username, this.serializer, this.connection);
 
         handleCentralReply(msg);
@@ -236,5 +236,118 @@ public class User {
         connection.multicast(message);
 
         this.superGroup.leave();
+    }
+
+    public void processMsg(SpreadMessage message) throws SpreadException, InterruptedIOException {
+        if (message.isRegular()) {
+            processRegularMsg(message);
+        }
+        else {
+            processMembershipMsg(message);
+        }
+    }
+
+    private void processRegularMsg(SpreadMessage message) throws SpreadException, InterruptedIOException {
+        Msg msg = this.serializer.decode(message.getData());
+        String followee = message.getMembershipInfo().getGroup().toString().split("Group")[0];
+        switch (msg.getType()) {
+            // Followee post
+            case "POST":
+                this.follower.updatePosts(getUsername(message.getSender().toString()), msg.getPosts(), true, "POST");
+                break;
+            // Follower receives posts
+            case "POSTS":
+                // Received posts from the followee
+                if (followee.equals(getUsername(message.getSender().toString()))) {
+                    this.follower.updatePosts(getUsername(message.getSender().toString()), msg.getPosts(), true, "POSTS");
+                }
+                // Received posts from a follower
+                else {
+                    this.follower.updatePosts(followee, msg.getPosts(), msg.getStatus(), "POSTS");
+                }
+                break;
+            // Follower requests posts
+            case "UPDATE":
+                Msg reply = new Msg();
+                reply.setType("POSTS");
+                // I'm the followee
+                if (this.followee.getUsername().equals(followee)) {
+                    // Get my posts
+                    reply.setPosts(this.followee.getPosts(msg.getLastPostId()));
+                    reply.setStatus(true);
+                    this.followee.sendMsg(reply, message.getSender().toString());
+                }
+                // I'm a follower
+                else {
+                    // Get followee's posts
+                    Pair<Boolean, List<Post>> pair = this.follower.getPosts(followee, msg.getLastPostId());
+                    reply.setPosts(pair.getSnd());
+                    reply.setStatus(pair.getFst());
+                    this.follower.sendMsg(reply, message.getSender().toString());
+                }
+                break;
+            // User gets promoted to superuser
+            case "PROMOTION":
+                promotion();
+                // Superuser update
+            case "SUPERUSER":
+                updateSuperuser(msg.getSuperuserIp(), msg.getSuperuser());
+            default:
+                break;
+        }
+    }
+
+    private void processMembershipMsg(SpreadMessage message) throws SpreadException {
+        if(! this.prepareSignOut) {
+            // Find which followee group originated the message
+            String followee = message.getMembershipInfo().getGroup().toString().split("Group")[0];
+
+            if (message.getMembershipInfo().isCausedByJoin()) {
+                String joinedUser = getUsername(message.getMembershipInfo().getJoined().toString());
+
+                // Followee signIn
+                if (joinedUser.equals(followee)) {
+                    // If this followees' posts are outdated, send request
+                    if (!this.follower.checkPostsStatus(followee)) {
+                        this.follower.sendPostsRequest(message.getMembershipInfo().getJoined().toString());
+                    }
+                }
+
+                // My signIn
+                else if (joinedUser.equals(this.follower.getUsername())) {
+                    this.follower.sendPostsRequest(selectMember(message, followee));
+                }
+            }
+        }
+        // Super user is preparing to sign out
+        else {
+            int connectedUsers = message.getMembershipInfo().getMembers().length;
+
+            if(connectedUsers == 1){
+                this.superGroup.leave();
+                this.signedIn = false;
+            }
+        }
+    }
+
+    public String getUsername (String privateGroup) {
+        // Select private name from private group
+        String[] parts = privateGroup.substring(1).split("#");
+        return parts[0];
+    }
+
+    private String selectMember(SpreadMessage message, String followee) {
+        List<SpreadGroup> members = Arrays.asList(message.getMembershipInfo().getMembers());
+        Map<String, String> usernames = members.stream()
+                .collect(Collectors.toMap(m -> getUsername(m.toString()), m -> m.toString()));
+
+        // Followee online
+        if (usernames.keySet().contains(followee)) {
+            return usernames.get(followee);
+        }
+
+        // Select random follower
+        Random rand = new Random();
+        return members.get(rand.nextInt(members.size())).toString();
     }
 }

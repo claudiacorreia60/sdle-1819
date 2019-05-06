@@ -1,11 +1,14 @@
 package user;
 
+import java.util.Calendar;
+import java.util.Date;
+
 public class Post {
     private int id;
-    private String date;
+    private Calendar date;
     private String content;
 
-    public Post(int id, String date, String content) {
+    public Post(int id, Calendar date, String content) {
         this.id = id;
         this.date = date;
         this.content = content;
@@ -19,11 +22,11 @@ public class Post {
         this.id = id;
     }
 
-    public String getDate() {
+    public Calendar getDate() {
         return date;
     }
 
-    public void setDate(String date) {
+    public void setDate(Calendar date) {
         this.date = date;
     }
 

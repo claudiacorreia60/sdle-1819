@@ -7,11 +7,11 @@ import spread.SpreadGroup;
 import spread.SpreadMessage;
 import utils.Msg;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.*;
 import java.util.stream.Collectors;
+
 
 public class Followee {
     private String username;
@@ -19,19 +19,28 @@ public class Followee {
     private SpreadConnection connection;
     private Map<Integer, Post> myPosts;
     private SpreadGroup myGroup;
+    private BufferedReader input;
+    private User user;
 
-    public Followee(String username, Serializer serializer, SpreadConnection connection) {
+    public Followee(String username, Serializer serializer, SpreadConnection connection, BufferedReader input, User user) throws IOException, SpreadException {
         this.username = username;
         // TODO: Recuperar informação de um ficheiro
         this.myPosts = new HashMap<>();
         this.serializer = serializer;
         this.connection = connection;
         this.myGroup = new SpreadGroup();
+        this.input = input;
+        this.user = user;
+
+        // Make posts/Logout
+        timelineMenu();
     }
 
     public void signIn(){
         try {
             this.myGroup.join(this.connection, this.username);
+            // Delete posts older than 5 minutes
+            filterPosts(5, "minute");
         } catch (SpreadException e) {
             e.printStackTrace();
         }
@@ -69,7 +78,41 @@ public class Followee {
         return requestedPosts;
     }
 
-    public void post(Post post){
+    public void timelineMenu() throws IOException, SpreadException {
+        while (this.user.isSignedIn()) {
+            System.out.println("#################### MENU ####################");
+            System.out.println("       (1) Post       |      (2) Sign out     ");
+            String read = this.input.readLine();
+            while (!read.equals("1") && !read.equals("2")) {
+                System.out.println("Error: Incorrect option. Please try again.");
+                read = this.input.readLine();
+            }
+            if (read.equals("1")) {
+                post();
+            } else {
+                signOut();
+            }
+        }
+    }
+
+    public void post() throws IOException {
+        String content = this.input.readLine();
+        // Get current date
+        Calendar date = Calendar.getInstance();
+        // Get post ID
+        int id = postId();
+        // Store post
+        Post post = new Post(id, date, content);
+        this.myPosts.put(id, post);
+        // Send post
+        sendPost(post);
+    }
+
+    private int postId() {
+        return Collections.max(this.myPosts.keySet()) + 1;
+    }
+
+    public void sendPost(Post post){
         Msg msg = new Msg();
         msg.setType("POST");
         List<Post> posts = new ArrayList<>();
@@ -82,6 +125,65 @@ public class Followee {
         } catch (SpreadException e) {
             e.printStackTrace();
         }
+    }
+
+    private void filterPosts(int time, String unit) {
+        Post post = this.myPosts.get(postId());
+        // Delete old posts
+        this.myPosts = this.myPosts.entrySet().stream()
+                .filter(x -> validateDate(x.getValue().getDate(), time, unit))
+                .collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue()));
+        if (this.myPosts.isEmpty()) {
+            this.myPosts.put(post.getId(), post);
+        }
+    }
+
+    private boolean validateDate(Calendar postDate, int time, String unit) {
+        Calendar now = Calendar.getInstance();
+        long nowMilis = now.getTimeInMillis();
+        long postDateMilis = postDate.getTimeInMillis();
+        long diff = nowMilis - postDateMilis;
+        switch (unit) {
+            case "year":
+                if (diff / (365 * 24 * 60 * 60 * 1000) < time) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            case "month":
+                if (diff / (30 * 24 * 60 * 60 * 1000) < time) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            case "day":
+                if (diff / (24 * 60 * 60 * 1000) < time) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            case "hour":
+                if (diff / (60 * 60 * 1000) < time) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            case "minute":
+                if (diff / (60 * 1000) < time) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            default:
+                break;
+        }
+
+        return false;
     }
 
     public void signOut() throws SpreadException {

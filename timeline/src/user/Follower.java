@@ -2,6 +2,7 @@ package user;
 
 import io.atomix.utils.serializer.Serializer;
 
+import org.omg.PortableServer.POA;
 import spread.SpreadConnection;
 import spread.SpreadException;
 import spread.SpreadGroup;
@@ -35,10 +36,8 @@ public class Follower {
     public void signIn() throws SpreadException, InterruptedIOException {
         SpreadGroup group;
         for (Map.Entry<String, Pair<Boolean, Map<Integer, Post>>> entry : this.followees.entrySet()) {
-            // Mark posts as OUTDATED
-            Pair<Boolean, Map<Integer, Post>> posts = entry.getValue();
-            posts.setFst(false);
-            this.followees.put(entry.getKey(), posts);
+            // Delete posts older than 2 minutes and update posts' status
+            filterFolloweesPosts(2, "minute");
             // Join followees' groups
             group = new SpreadGroup();
             group.join(this.connection, entry.getKey()+"Group");
@@ -103,7 +102,7 @@ public class Follower {
             followeePosts.put(post.getId(), post);
             System.out.println("################## NEW POST ##################");
             System.out.println("FROM: "+followee);
-            System.out.println("DATE: "+post.getDate());
+            System.out.println("DATE: "+post.getDate().toString());
             System.out.println("POST: "+post.getContent());
         }
         if (type.equals("POSTS")) {
@@ -119,6 +118,69 @@ public class Follower {
                 .collect(Collectors.toList());
         Pair<Boolean, List<Post>> pair = new Pair<>(this.followees.get(followee).getFst(), requestedPosts);
         return pair;
+    }
+
+    private void filterFolloweesPosts(int time, String unit) {
+        for (Map.Entry<String, Pair<Boolean, Map<Integer, Post>>> entry : this.followees.entrySet()) {
+            // Delete old posts
+            Map<Integer, Post> posts = entry.getValue().getSnd();
+            posts = posts.entrySet().stream()
+                    .filter(x -> validateDate(x.getValue().getDate(), time, unit))
+                    .collect(Collectors.toMap(x -> x.getKey(), x -> x.getValue()));
+            Pair<Boolean, Map<Integer, Post>> pair = entry.getValue();
+            // Mark posts as OUTDATED
+            pair.setFst(false);
+            pair.setSnd(posts);
+            this.followees.put(entry.getKey(), pair);
+        }
+    }
+
+    private boolean validateDate(Calendar postDate, int time, String unit) {
+        Calendar now = Calendar.getInstance();
+        long nowMilis = now.getTimeInMillis();
+        long postDateMilis = postDate.getTimeInMillis();
+        long diff = nowMilis - postDateMilis;
+        switch (unit) {
+            case "year":
+                if (diff / (365 * 24 * 60 * 60 * 1000) < time) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            case "month":
+                if (diff / (30 * 24 * 60 * 60 * 1000) < time) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            case "day":
+                if (diff / (24 * 60 * 60 * 1000) < time) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            case "hour":
+                if (diff / (60 * 60 * 1000) < time) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            case "minute":
+                if (diff / (60 * 1000) < time) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            default:
+                break;
+        }
+
+        return false;
     }
 
     public String getUsername() {
