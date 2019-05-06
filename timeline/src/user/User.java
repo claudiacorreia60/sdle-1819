@@ -252,11 +252,10 @@ public class User {
         connection.multicast(message);
     }
 
-    //TODO: Falta implementar as condições de transformação e a atualização da conecção do spread.
-    private void becomeSuperuser() throws SpreadException {
+    public void becomeSuperuser() throws SpreadException {
         SpreadMessage message = new SpreadMessage();
 
-        this.isSuperuser = true;
+        this.setSuperuser(true);
         Msg msg = new Msg();
         msg.setType("SUPERUSER");
         msg.setSuperuserIp(this.myAddress);

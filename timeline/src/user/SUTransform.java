@@ -7,23 +7,18 @@ import java.util.TimerTask;
 
 public class SUTransform extends TimerTask {
 
-    private User u;
+    private User user;
 
     public SUTransform(User u) {
-        this.u = u;
+        this.user = u;
     }
 
     @Override
     public void run() {
         //TODO: Atualizar ficheiro de configuração do spread
-        if (!u.isSuperuser()) {
-            u.setSuperuser(true);
-
-            Msg msg = new Msg();
-            msg.setType("SUPERUSER");
-            msg.setSuperuserIp(u.getMyAddress());
+        if (!user.isSuperuser()) {
             try {
-                u.sendMsg(msg, "centralGroup");
+                user.becomeSuperuser();
             } catch (SpreadException e) {
                 e.printStackTrace();
             }
