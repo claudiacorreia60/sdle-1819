@@ -39,9 +39,6 @@ public class Followee {
             this.myGroup.join(this.connection, this.username + "Group");
             // Delete posts older than 5 minutes
             filterPosts(5, "minute");
-
-            // Make posts/Logout menu
-            timelineMenu();
         } catch (SpreadException e) {
             e.printStackTrace();
         }
@@ -77,28 +74,6 @@ public class Followee {
         List<Post> requestedPosts = this.myPosts.values().stream().filter(post -> post.getId() > lastPostId)
                 .collect(Collectors.toList());
         return requestedPosts;
-    }
-
-    public void timelineMenu() throws IOException, SpreadException {
-        // TODO: Meter opção de FOLLOW E UNFOLLOW
-        while (this.user.isSignedIn()) {
-            System.out.println("\n#################### MENU ####################");
-            System.out.println("       (1) Post       |      (2) Sign out     ");
-            String read = this.input.readLine();
-            while (!read.equals("1") && !read.equals("2")) {
-                System.out.println("Error: Incorrect option. Please try again.");
-                read = this.input.readLine();
-            }
-            if (read.equals("1")) {
-                post();
-            } else {
-                if (this.user.isSuperuser()) {
-                    this.user.superuserSignOut();
-                } else {
-                    this.user.signOut();
-                }
-            }
-        }
     }
 
     public void post() throws IOException {

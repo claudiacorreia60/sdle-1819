@@ -8,6 +8,8 @@ import spread.SpreadMessage;
 import utils.Msg;
 import utils.Pair;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -19,15 +21,17 @@ public class Follower {
     private Serializer serializer;
     private SpreadConnection connection;
     private Map<String, SpreadGroup> followeesGroups;
+    private BufferedReader input;
 
 
-    public Follower(String username, Serializer serializer, SpreadConnection connection) {
+    public Follower(String username, Serializer serializer, SpreadConnection connection, BufferedReader input) {
         this.username = username;
         // TODO: Recuperar informação de um ficheiro
         this.followees = new HashMap<>();
         this.serializer = serializer;
         this.connection = connection;
         this.followeesGroups = new HashMap<>();
+        this.input = input;
     }
 
     public void signIn() throws SpreadException, InterruptedIOException {
@@ -64,10 +68,53 @@ public class Follower {
         return Collections.max(posts.keySet());
     }
 
-    public void subscribe (String followee) throws SpreadException {
-        SpreadGroup group = new SpreadGroup();
-        group.join(this.connection, followee+"Group");
-        this.followeesGroups.put(followee, group);
+    public void follow() {
+        boolean success = false;
+        String username = null;
+        SpreadGroup group = null;
+        while (! success) {
+            success = true;
+            System.out.print("\nUsername: ");
+            try {
+                username = this.input.readLine();
+                group = new SpreadGroup();
+                group.join(this.connection, username + "Group");
+            } catch (SpreadException e) {
+                success = false;
+                System.out.println("Error: Please try again.");
+            } catch (IOException e) {
+                success = false;
+                System.out.println("Error: Please try again.");
+            }
+        }
+        this.followeesGroups.put(username, group);
+        this.followees.put(username, new Pair<>(false, new HashMap<>()));
+    }
+
+    public void unfollow() {
+        boolean success = false;
+        while (! success) {
+            success = true;
+            System.out.print("\nUsername: ");
+            try {
+                String username = this.input.readLine();
+                SpreadGroup group = this.followeesGroups.get(username);
+                if (group == null) {
+                    success = false;
+                }
+                else {
+                    group.leave();
+                    this.followees.remove(username);
+                    this.followeesGroups.remove(username);
+                }
+            } catch (SpreadException e) {
+                success = false;
+                System.out.println("Error: Please try again.");
+            } catch (IOException e) {
+                success = false;
+                System.out.println("Error: Please try again.");
+            }
+        }
     }
 
     public void signOut() throws SpreadException {
@@ -98,6 +145,7 @@ public class Follower {
     }
 
     public void updatePosts(String followee, List<Post> posts, boolean postsStatus, String type) {
+        System.out.println("2");
         Pair<Boolean, Map<Integer, Post>> pair = this.followees.get(followee);
         boolean myPost = true;
         Map<Integer, Post> followeePosts = null;
@@ -107,6 +155,7 @@ public class Follower {
             followeePosts = pair.getSnd();
         }
         for (Post post : posts) {
+            System.out.println("3");
             // Save followee's post
             if (!myPost) {
                 followeePosts.put(post.getId(), post);

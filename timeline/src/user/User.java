@@ -112,9 +112,12 @@ public class User {
 
     public void initialMenu() throws IOException, SpreadException {
         System.out.println("#################### MENU ####################");
-        System.out.println("      (1) Sign in      |      (2) Sign up     ");
+        System.out.println("#                (1) Sign in                 #");
+        System.out.println("#                (2) Sign up                 #");
+        System.out.println("##############################################");
         String read = this.input.readLine();
-        while (!read.equals("1") && !read.equals("2")) {
+        String[] options = {"1","2"};
+        while (! Arrays.asList(options).contains(read)) {
             System.out.println("Error: Incorrect option. Please try again.");
             read = this.input.readLine();
         }
@@ -151,7 +154,7 @@ public class User {
             result = msg.getType();
         }
 
-        this.follower = new Follower(this.username, this.serializer, this.connection);
+        this.follower = new Follower(this.username, this.serializer, this.connection, this.input);
         this.followee = new Followee(this.username, this.serializer, this.connection, this.input, this);
 
         handleCentralReply(msg);
@@ -159,14 +162,54 @@ public class User {
         // Sign in
         this.signedIn = true;
         this.totalSignIns += 1;
+        this.follower.signIn();
+        this.followee.signIn();
 
         // Initialize UserReceiver thread
         UserReceiver ur = new UserReceiver(this);
         Thread t = new Thread(ur);
         t.start();
 
-        this.follower.signIn();
-        this.followee.signIn();
+        // Make posts/Logout menu
+        timelineMenu();
+    }
+
+    public void timelineMenu() throws IOException, SpreadException {
+        // TODO: Meter opção de FOLLOW E UNFOLLOW
+        while (this.signedIn) {
+            System.out.println("\n#################### MENU ####################");
+            System.out.println("#                  (1) Post                  #");
+            System.out.println("#                 (2) Follow                 #");
+            System.out.println("#                (3) Unfollow                #");
+            System.out.println("#                (4) Sign out                #");
+            System.out.println("##############################################");
+            String read = this.input.readLine();
+            String[] options = {"1","2","3","4"};
+            while (! Arrays.asList(options).contains(read)) {
+                System.out.println("Error: Incorrect option. Please try again.");
+                read = this.input.readLine();
+            }
+            switch (read) {
+                case "1":
+                    this.followee.post();
+                    break;
+                case "2":
+                    this.follower.follow();
+                    break;
+                case "3":
+                    this.follower.unfollow();
+                    break;
+                case "4":
+                    if (this.isSuperuser) {
+                        superuserSignOut();
+                    } else {
+                        signOut();
+                    }
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 
     public void handleCentralReply(Msg msg) throws SpreadException, InterruptedIOException {
@@ -296,9 +339,18 @@ public class User {
         }
     }
 
+    private String getFollowee(SpreadMessage message) {
+        if (message.getGroups()[0].toString().contains("#")) {
+            return getUsername(message.getGroups()[0].toString());
+        }
+        else {
+            return message.getGroups()[0].toString().split("Group")[0];
+        }
+    }
+
     private void processRegularMsg(SpreadMessage message) throws SpreadException, InterruptedIOException {
         Msg msg = this.serializer.decode(message.getData());
-        String followee = message.getGroups()[0].toString().split("Group")[0];
+        String followee = getFollowee(message);
 
         switch (msg.getType()) {
             // Followee post
@@ -307,12 +359,15 @@ public class User {
                 break;
             // Follower receives posts
             case "POSTS":
+                System.out.println(followee);
                 // Received posts from the followee
                 if (followee.equals(getUsername(message.getSender().toString()))) {
+                    System.out.println("1");
                     this.follower.updatePosts(getUsername(message.getSender().toString()), msg.getPosts(), true, "POSTS");
                 }
                 // Received posts from a follower
                 else {
+                    System.out.println("4");
                     this.follower.updatePosts(followee, msg.getPosts(), msg.getStatus(), "POSTS");
                 }
                 break;
@@ -321,7 +376,7 @@ public class User {
                 Msg reply = new Msg();
                 reply.setType("POSTS");
                 // I'm the followee
-                if (this.followee.getUsername().equals(followee)) {
+                if (this.username.equals(followee)) {
                     // Get my posts
                     reply.setPosts(this.followee.getPosts(msg.getLastPostId()));
                     reply.setStatus(true);
