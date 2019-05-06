@@ -94,9 +94,11 @@ public class User {
 
         // Timer that transforms the User into a Super-user after 2 days of current uptime
         // TODO: Persistência
-        if (this.averageUpTime >= 1.728e+14) {
+        if (this.averageUpTime == 0) {
             SUTransform t = new SUTransform(this);
-            new Timer().schedule(t, this.averageUpTime);
+            new Timer().schedule(t, 172800*1000);
+        } else if (this.averageUpTime >= 1.728e+14) {
+            this.isSuperuser = true;
         }
 
         // Sign in/Sign up
