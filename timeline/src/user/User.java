@@ -8,12 +8,14 @@ import spread.SpreadMessage;
 import utils.Msg;
 import utils.Pair;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.InterruptedIOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
 import java.util.stream.Collectors;
-
 
 public class User {
     private String myAddress;
@@ -28,6 +30,21 @@ public class User {
     private boolean prepareSignOut;
     private Followee followee;
     private Follower follower;
+    private long startTime;
+    private long averageUpTime;
+    private long totalSignIns;
+
+    public void setSuperuser(boolean superuser) {
+        isSuperuser = superuser;
+    }
+
+    public String getMyAddress() {
+        return myAddress;
+    }
+
+    public boolean isSuperuser() {
+        return isSuperuser;
+    }
 
     public SpreadGroup getSuperGroup() {
         return superGroup;
@@ -71,6 +88,16 @@ public class User {
         this.superGroup = null;
         this.signedIn = false;
         this.prepareSignOut = false;
+        this.startTime = System.nanoTime();
+        this.averageUpTime = 0; //TODO: Persistência
+        this.totalSignIns = 0; //TODO: Persistência
+
+        // Timer that transforms the User into a Super-user after 2 days of current uptime
+        // TODO: Persistência
+        if (this.averageUpTime >= 1.728e+14) {
+            SUTransform t = new SUTransform(this);
+            new Timer().schedule(t, this.averageUpTime);
+        }
 
         // Sign in/Sign up
         initialMenu();
@@ -125,6 +152,7 @@ public class User {
         this.signedIn = true;
         this.follower.signIn();
         this.followee.signIn();
+        this.totalSignIns += 1;
 
         // Initialize UserReceiver thread
         UserReceiver ur = new UserReceiver(this);
@@ -192,6 +220,11 @@ public class User {
         this.followee.signOut();
         this.follower.signOut();
         this.superGroup.leave();
+
+        long endTime = System.nanoTime();
+        this.averageUpTime = (endTime - this.startTime)/this.totalSignIns;
+
+        //TODO: Persistir as coisas que devem ser persistidas
     }
 
     public void superuserSignOut() throws SpreadException, InterruptedIOException {
@@ -208,7 +241,7 @@ public class User {
         this.prepareSignOut = true;
     }
 
-    private void sendMsg(Msg m, String group) throws SpreadException {
+    public void sendMsg(Msg m, String group) throws SpreadException {
         SpreadMessage message = new SpreadMessage();
 
         message.setData(this.serializer.encode(m));

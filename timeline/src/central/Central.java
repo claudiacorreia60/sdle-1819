@@ -72,6 +72,7 @@ public class Central {
                         break;
 
                     case "SUPERUSER":
+                        // TODO: Avisar todos os superusers da existencia de um novo superuser para eles atualizarem o ficheiro de config
                         if (this.waitingPromotion != null && this.waitingPromotion.getFst()) {
                             String loggedOutSuperuser = this.waitingPromotion.getSnd();
 
