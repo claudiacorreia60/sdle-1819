@@ -75,14 +75,14 @@ public class Central {
                         if (this.waitingPromotion != null && this.waitingPromotion.getFst()) {
                             String loggedOutSuperuser = this.waitingPromotion.getSnd();
 
-                            Msg msg2 = new Msg();
-                            msg2.setType("SUPERUSER_UPDATE");
-                            msg2.setSuperuser(username);
-                            msg2.setSuperuserIp(msg.getSuperuserIp());
-                            sendMsg(msg2, loggedOutSuperuser+"SuperGroup");
+                            Msg m = new Msg();
+                            m.setType("SUPERUSER");
+                            m.setSuperuser(username);
+                            m.setSuperuserIp(msg.getSuperuserIp());
+                            sendMsg(m, loggedOutSuperuser+"SuperGroup");
 
-                            msg2.setType("DISCONNECT");
-                            sendMsg(msg2, this.superusers.get(loggedOutSuperuser).getSnd());
+                            m.setType("DISCONNECT");
+                            sendMsg(m, this.superusers.get(loggedOutSuperuser).getSnd());
                             this.waitingPromotion = null;
                         }
                         String superuserIp = msg.getSuperuserIp();
@@ -96,35 +96,39 @@ public class Central {
         }
     }
 
-    private void superuserAtribution(SpreadMessage message) throws SpreadException {
-        Msg msg2;
+    private void superuserAtribution(SpreadMessage message, String ip) throws SpreadException {
+        Msg msg;
         SpreadGroup dest;
 
         // Caso existam superusers online
         if (this.superusers.values().stream().anyMatch(p -> p.getFst() == true)) {
-            msg2 = new Msg();
-            msg2.setType("SUPERUSER");
+            msg = new Msg();
+            msg.setType("SUPERUSER");
 
             String superuser = getRandomSuperuser();
             String superuserIp = this.superusers.get(superuser).getSnd();
 
-            msg2.setSuperuser(superuser);
-            msg2.setSuperuserIp(superuserIp);
+            msg.setSuperuser(superuser);
+            msg.setSuperuserIp(superuserIp);
             dest = message.getSender();
-            sendMsg(msg2, dest);
+            sendMsg(msg, dest);
         } else { // Caso contrário
-            msg2 = new Msg();
-            msg2.setType("PROMOTION");
+            String username = message.getSender().toString().split("#")[1];
+
+            this.superusers.put(username, new Pair<>(true, ip));
+
+            msg = new Msg();
+            msg.setType("PROMOTION");
             dest = message.getSender();
-            sendMsg(msg2, dest);
+            sendMsg(msg, dest);
         }
     }
 
     private void sendNack(SpreadMessage message) throws SpreadException {
-        Msg msg2 = new Msg();
-        msg2.setType("NACK");
+        Msg msg = new Msg();
+        msg.setType("NACK");
         SpreadGroup dest = message.getSender();
-        sendMsg(msg2, dest);
+        sendMsg(msg, dest);
     }
 
     private void signup(SpreadMessage message, Msg msg) throws SpreadException {
@@ -150,7 +154,7 @@ public class Central {
             } else {
                 this.users.put(username, new Triple(password, true, ip));
             }
-            superuserAtribution(message);
+            superuserAtribution(message, ip);
             System.out.println(username + " signed in!");
         } else {
             sendNack(message);
@@ -162,35 +166,35 @@ public class Central {
     }
 
     private void logoutFromSuperuser(String username) throws SpreadException {
-        Msg msg2 = new Msg();
-        msg2.setType("SUPERUSER_UPDATE");
+        Msg msg = new Msg();
+        msg.setType("SUPERUSER_UPDATE");
         this.superusers.put(username, new Pair(false, ""));
         this.users.put(username, new Triple(this.users.get(username).getFst(), false, ""));
 
         if (this.superusers.values().stream().anyMatch(p -> p.getFst() == true)) {
             String superuser = getRandomSuperuser();
             String superuserIp = this.superusers.get(superuser).getSnd();
-            msg2.setSuperuser(superuser);
-            msg2.setSuperuserIp(superuserIp);
+            msg.setSuperuser(superuser);
+            msg.setSuperuserIp(superuserIp);
 
-            sendMsg(msg2, superuser + "SuperGroup");
+            sendMsg(msg, superuser + "SuperGroup");
         } else {
-            msg2.setType("PROMOTION");
+            msg.setType("PROMOTION");
             String user = getRandomUser();
-            sendMsg(msg2, user+"Group");
+            sendMsg(msg, user+"Group");
 
             this.waitingPromotion = new Pair(true, username);
 
             String userIp = this.users.get(user).getTrd();
-            msg2.setSuperuser(user);
-            msg2.setSuperuserIp(userIp);
+            msg.setSuperuser(user);
+            msg.setSuperuserIp(userIp);
         }
 
     }
 
-    private void sendMsg(Msg msg2, String group) throws SpreadException {
+    private void sendMsg(Msg msg, String group) throws SpreadException {
         SpreadMessage newMessage = new SpreadMessage();
-        newMessage.setData(this.s.encode(msg2));
+        newMessage.setData(this.s.encode(msg));
         newMessage.addGroup(group);
         newMessage.setAgreed();
         newMessage.setReliable();
@@ -200,7 +204,7 @@ public class Central {
     private String getRandomSuperuser() {
         Random rand = new Random();
         List<String> online = this.superusers.entrySet().stream()
-                .filter(e -> !e.getValue().getFst())
+                .filter(e -> e.getValue().getFst())
                 .map(e -> e.getKey())
                 .collect(Collectors.toList());
         int randomIndex = rand.nextInt(online.size());
@@ -217,9 +221,9 @@ public class Central {
         return online.get(randomIndex);
     }
 
-    private void sendMsg(Msg msg2, SpreadGroup dest) throws SpreadException {
+    private void sendMsg(Msg msg, SpreadGroup dest) throws SpreadException {
         SpreadMessage newMessage = new SpreadMessage();
-        newMessage.setData(this.s.encode(msg2));
+        newMessage.setData(this.s.encode(msg));
         newMessage.addGroup(dest);
         newMessage.setAgreed();
         newMessage.setReliable();

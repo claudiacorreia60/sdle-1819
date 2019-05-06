@@ -49,7 +49,7 @@ public class User {
         this.prepareSignOut = false;
         this.startTime = System.nanoTime();
         this.averageUpTime = 0; //TODO: Persistência
-        this.totalSignIns = 0; //TODO: Persistência
+        this.totalSignIns = 1; //TODO: Persistência
         this.connectedUsers = 0;
 
         // Timer that transforms the User into a Super-user after 2 days of current uptime
@@ -175,7 +175,6 @@ public class User {
     }
 
     public void timelineMenu() throws IOException, SpreadException {
-        // TODO: Meter opção de FOLLOW E UNFOLLOW
         while (this.signedIn) {
             System.out.println("\n#################### MENU ####################");
             System.out.println("#                  (1) Post                  #");
@@ -203,7 +202,7 @@ public class User {
                     if (this.isSuperuser) {
                         superuserSignOut();
                     } else {
-                        signOut();
+                        signOut(true);
                     }
                     break;
                 default:
@@ -214,6 +213,7 @@ public class User {
 
     public void handleCentralReply(Msg msg) throws SpreadException, InterruptedIOException {
         if(msg.getType().equals("PROMOTION")){
+            System.out.println("Central reply");
             promotion();
         }
         else {
@@ -234,7 +234,7 @@ public class User {
             superuserSignOut();
         }
         else {
-            signOut();
+            signOut(false);
         }
         // Disconnect from my daemon
         this.connection.disconnect();
@@ -255,11 +255,14 @@ public class User {
                     false,
                     true);
         } catch (SpreadException e) {
-        } catch (UnknownHostException e) {}
+            e.printStackTrace();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
     }
 
 
-    public void signOut() throws SpreadException, InterruptedIOException {
+    public void signOut(boolean isExiting) throws SpreadException, InterruptedIOException {
         this.signedIn = false;
 
         // Inform central
@@ -270,12 +273,16 @@ public class User {
         // Leave all groups
         this.followee.signOut();
         this.follower.signOut();
-        this.superGroup.leave();
+        if (this.superGroup != null) {
+            this.superGroup.leave();
+        }
 
         long endTime = System.nanoTime();
         this.averageUpTime = (endTime - this.startTime)/this.totalSignIns;
 
-        System.exit(0);
+        if (isExiting) {
+            System.exit(0);
+        }
 
         //TODO: Persistir as coisas que devem ser persistidas
     }
@@ -291,7 +298,9 @@ public class User {
         this.follower.signOut();
 
         if(this.connectedUsers == 1) {
-            this.superGroup.leave();
+            if (this.superGroup != null) {
+                this.superGroup.leave();
+            }
             this.signedIn = false;
 
             System.exit(0);
@@ -315,7 +324,7 @@ public class User {
     public void becomeSuperuser() throws SpreadException {
         SpreadMessage message = new SpreadMessage();
 
-        this.setSuperuser(true);
+        this.isSuperuser = true;
         Msg msg = new Msg();
         msg.setType("SUPERUSER");
         msg.setSuperuserIp(this.myAddress);
@@ -328,6 +337,7 @@ public class User {
         connection.multicast(message);
 
         this.superGroup.leave();
+        this.superGroup.join(this.connection, this.username + "SuperGroup");
     }
 
     public void processMsg(SpreadMessage message) throws SpreadException, InterruptedIOException {
@@ -339,18 +349,9 @@ public class User {
         }
     }
 
-    private String getFollowee(SpreadMessage message) {
-        if (message.getGroups()[0].toString().contains("#")) {
-            return getUsername(message.getGroups()[0].toString());
-        }
-        else {
-            return message.getGroups()[0].toString().split("Group")[0];
-        }
-    }
-
     private void processRegularMsg(SpreadMessage message) throws SpreadException, InterruptedIOException {
         Msg msg = this.serializer.decode(message.getData());
-        String followee = getFollowee(message);
+        String followee = msg.getFollowee();
 
         switch (msg.getType()) {
             // Followee post
@@ -359,15 +360,12 @@ public class User {
                 break;
             // Follower receives posts
             case "POSTS":
-                System.out.println(followee);
                 // Received posts from the followee
                 if (followee.equals(getUsername(message.getSender().toString()))) {
-                    System.out.println("1");
                     this.follower.updatePosts(getUsername(message.getSender().toString()), msg.getPosts(), true, "POSTS");
                 }
                 // Received posts from a follower
                 else {
-                    System.out.println("4");
                     this.follower.updatePosts(followee, msg.getPosts(), msg.getStatus(), "POSTS");
                 }
                 break;
@@ -380,6 +378,7 @@ public class User {
                     // Get my posts
                     reply.setPosts(this.followee.getPosts(msg.getLastPostId()));
                     reply.setStatus(true);
+                    reply.setFollowee(followee);
                     this.followee.sendMsg(reply, message.getSender().toString());
                 }
                 // I'm a follower
@@ -388,11 +387,13 @@ public class User {
                     Pair<Boolean, List<Post>> pair = this.follower.getPosts(followee, msg.getLastPostId());
                     reply.setPosts(pair.getSnd());
                     reply.setStatus(pair.getFst());
+                    reply.setFollowee(followee);
                     this.follower.sendMsg(reply, message.getSender().toString());
                 }
                 break;
             // User gets promoted to superuser
             case "PROMOTION":
+                System.out.println("PROMOTION: " + msg.getSuperuserIp() + " " + msg.getSuperuser());
                 promotion();
                 // Superuser update
             case "SUPERUSER":
@@ -438,13 +439,13 @@ public class User {
                 if (joinedUser.equals(followee)) {
                     // If this followees' posts are outdated, send request
                     if (!this.follower.checkPostsStatus(followee)) {
-                        this.follower.sendPostsRequest(message.getMembershipInfo().getJoined().toString());
+                        this.follower.sendPostsRequest(message.getMembershipInfo().getJoined().toString(), followee);
                     }
                 }
 
                 // My signIn
                 else if (joinedUser.equals(this.username)) {
-                    this.follower.sendPostsRequest(selectMember(message, followee));
+                    this.follower.sendPostsRequest(selectMember(message, followee), followee);
                 }
             }
         }

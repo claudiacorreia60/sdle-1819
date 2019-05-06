@@ -46,17 +46,12 @@ public class Follower {
         }
     }
 
-    public void sendPostsRequest(String privateGroup) throws SpreadException {
+    public void sendPostsRequest(String privateGroup, String followee) throws SpreadException {
         Msg msg = new Msg();
         msg.setType("UPDATE");
-        msg.setLastPostId(findLastPostId(getUsername(privateGroup)));
+        msg.setFollowee(followee);
+        msg.setLastPostId(findLastPostId(followee));
         sendMsg(msg, privateGroup);
-    }
-
-    public String getUsername (String privateGroup) {
-        // Select private name from private group
-        String[] parts = privateGroup.substring(1).split("#");
-        return parts[0];
     }
 
     public int findLastPostId (String username) {
@@ -64,8 +59,8 @@ public class Follower {
         if (posts.size() == 0) {
             return 0;
         }
-        // Select highest post ID
-        return Collections.max(posts.keySet());
+        // Select next post to receive
+        return Collections.max(posts.keySet()) + 1;
     }
 
     public void follow() {
@@ -145,7 +140,6 @@ public class Follower {
     }
 
     public void updatePosts(String followee, List<Post> posts, boolean postsStatus, String type) {
-        System.out.println("2");
         Pair<Boolean, Map<Integer, Post>> pair = this.followees.get(followee);
         boolean myPost = true;
         Map<Integer, Post> followeePosts = null;
@@ -155,7 +149,6 @@ public class Follower {
             followeePosts = pair.getSnd();
         }
         for (Post post : posts) {
-            System.out.println("3");
             // Save followee's post
             if (!myPost) {
                 followeePosts.put(post.getId(), post);
@@ -245,9 +238,5 @@ public class Follower {
         }
 
         return false;
-    }
-
-    public String getUsername() {
-        return username;
     }
 }

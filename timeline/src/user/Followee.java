@@ -28,7 +28,7 @@ public class Followee {
         this.myPosts = new HashMap<>();
         this.serializer = serializer;
         this.connection = connection;
-        this.myGroup = new SpreadGroup();
+        this.myGroup = null;
         this.input = input;
         this.user = user;
     }
@@ -36,6 +36,7 @@ public class Followee {
     public void signIn() throws IOException {
         try {
             // Join my own followee group
+            this.myGroup = new SpreadGroup();
             this.myGroup.join(this.connection, this.username + "Group");
             // Delete posts older than 5 minutes
             filterPosts(5, "minute");
@@ -46,32 +47,8 @@ public class Followee {
         //TODO: Caso não tenha informação local, envia uma mensagem para o grupo a pedir os dados dele
     }
 
-    public void subscribe(String follower){
-        Msg msg = new Msg();
-        msg.setType("SUBSCRIPTION");
-        msg.setPosts(new ArrayList<>(this.myPosts.values()));
-
-        try {
-            sendMsg(msg, follower);
-        } catch (SpreadException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void updatePosts(String follower){
-        Msg msg = new Msg();
-        msg.setType("POSTS");
-        msg.setPosts(new ArrayList<>(this.myPosts.values()));
-
-        try {
-            sendMsg(msg, follower);
-        } catch (SpreadException e) {
-            e.printStackTrace();
-        }
-    }
-
     public List<Post> getPosts(int lastPostId) {
-        List<Post> requestedPosts = this.myPosts.values().stream().filter(post -> post.getId() > lastPostId)
+        List<Post> requestedPosts = this.myPosts.values().stream().filter(post -> post.getId() >= lastPostId)
                 .collect(Collectors.toList());
         return requestedPosts;
     }
@@ -102,6 +79,7 @@ public class Followee {
     public void sendPost(Post post){
         Msg msg = new Msg();
         msg.setType("POST");
+        msg.setFollowee(this.username);
         List<Post> posts = new ArrayList<>();
         posts.add(post);
         msg.setPosts(posts);
@@ -178,8 +156,10 @@ public class Followee {
     }
 
     public void signOut() throws SpreadException {
-        // Leave my group
-        this.myGroup.leave();
+        if (this.myGroup != null) {
+            // Leave my group
+            this.myGroup.leave();
+        }
     }
 
     public void sendMsg(Msg m, String group) throws SpreadException {

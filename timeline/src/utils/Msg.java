@@ -13,6 +13,7 @@ public class Msg {
     private String superuser;
     private String superuserIp;
     private boolean status;
+    private String followee;
 
 
     public String getType() {
@@ -77,5 +78,13 @@ public class Msg {
 
     public void setStatus(boolean status) {
         this.status = status;
+    }
+
+    public String getFollowee() {
+        return followee;
+    }
+
+    public void setFollowee(String followee) {
+        this.followee = followee;
     }
 }
