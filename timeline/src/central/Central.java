@@ -167,7 +167,7 @@ public class Central {
 
     private void logoutFromSuperuser(String username) throws SpreadException {
         Msg msg = new Msg();
-        msg.setType("SUPERUSER_UPDATE");
+        msg.setType("SUPERUSER");
         this.superusers.put(username, new Pair(false, ""));
         this.users.put(username, new Triple(this.users.get(username).getFst(), false, ""));
 

@@ -51,6 +51,10 @@ public class User {
         this.averageUpTime = 0; //TODO: Persistência
         this.totalSignIns = 1; //TODO: Persistência
         this.connectedUsers = 0;
+        this.connection = new SpreadConnection();
+
+        // Open spread connection
+        openSpreadConnection("localhost");
 
         // Timer that transforms the User into a Super-user after 2 days of current uptime
         // TODO: Persistência
@@ -139,8 +143,6 @@ public class User {
             this.username = this.input.readLine();
             System.out.print("> Password: ");
             this.password = this.input.readLine();
-            // Open spread connection
-            openSpreadConnection("localhost");
             // Send message to central
             msg = new Msg();
             String[] tokens = type.split(" ");
@@ -222,6 +224,10 @@ public class User {
     }
 
     public void promotion() throws SpreadException {
+        // TODO: mudar o ficheiro de configuração
+        // Disconnect from my daemon
+        this.connection.disconnect();
+        openSpreadConnection(this.myAddress);
         this.isSuperuser = true;
         // Connect to superuser's group
         this.superGroup = new SpreadGroup();
@@ -229,13 +235,8 @@ public class User {
     }
 
     public void updateSuperuser(String superuserIp, String superuser) throws SpreadException, InterruptedIOException {
-        // Sign out temporarily
-        if(this.isSuperuser){
-            superuserSignOut();
-        }
-        else {
-            signOut(false);
-        }
+        // Leave groups
+        disconnect();
         // Disconnect from my daemon
         this.connection.disconnect();
         // Connect to superuser's daemon
@@ -247,7 +248,6 @@ public class User {
 
     public void openSpreadConnection (String address) {
         try {
-            this.connection = new SpreadConnection();
             this.connection.connect(
                     InetAddress.getByName(address),
                     4803,
@@ -270,12 +270,8 @@ public class User {
         msg.setType("SIGNOUT");
         sendMsg(msg, "centralGroup");
 
-        // Leave all groups
-        this.followee.signOut();
-        this.follower.signOut();
-        if (this.superGroup != null) {
-            this.superGroup.leave();
-        }
+        // Leave groups
+        disconnect();
 
         long endTime = System.nanoTime();
         this.averageUpTime = (endTime - this.startTime)/this.totalSignIns;
@@ -285,6 +281,15 @@ public class User {
         }
 
         //TODO: Persistir as coisas que devem ser persistidas
+    }
+
+    public void disconnect() throws SpreadException, InterruptedIOException {
+        // Leave all groups
+        this.followee.signOut();
+        this.follower.signOut();
+        if (this.superGroup != null) {
+            this.superGroup.leave();
+        }
     }
 
     public void superuserSignOut() throws SpreadException, InterruptedIOException {
@@ -406,13 +411,13 @@ public class User {
     private void processMembershipMsg(SpreadMessage message) throws SpreadException {
         boolean isSuperGroup = message.getMembershipInfo().getGroup().toString().contains("SuperGroup");
 
-            if (! this.prepareSignOut && ! isSuperGroup) {
-                processGroupMsg(message);
-            }
-            // Super user is preparing to sign out
-            if (isSuperGroup){
-                processSuperGroupMsg(message);
-            }
+        if (! this.prepareSignOut && ! isSuperGroup) {
+            processGroupMsg(message);
+        }
+        // Super user is preparing to sign out
+        if (isSuperGroup){
+            processSuperGroupMsg(message);
+        }
     }
 
     private void processSuperGroupMsg(SpreadMessage message) throws SpreadException {
