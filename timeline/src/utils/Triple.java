@@ -1,6 +1,8 @@
 package utils;
 
-public class Triple<FST, SND, TRD> {
+import java.io.Serializable;
+
+public class Triple<FST, SND, TRD> implements Serializable {
     private FST fst;
     private SND snd;
     private TRD trd;

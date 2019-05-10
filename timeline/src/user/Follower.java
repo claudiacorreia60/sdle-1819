@@ -11,27 +11,35 @@ import utils.Pair;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 
 
-public class Follower {
-    private String username;
+public class Follower implements Serializable {
+    private transient String username;
     private Map<String, Pair<Boolean, Map<Integer, Post>>> followees;
-    private Serializer serializer;
-    private SpreadConnection connection;
-    private Map<String, SpreadGroup> followeesGroups;
-    private BufferedReader input;
+    private transient Serializer serializer;
+    private transient SpreadConnection connection;
+    private transient Map<String, SpreadGroup> followeesGroups;
+    private transient BufferedReader input;
 
 
     public Follower(String username, Serializer serializer, SpreadConnection connection, BufferedReader input) {
         this.username = username;
-        // TODO: Recuperar informação de um ficheiro
         this.followees = new HashMap<>();
         this.serializer = serializer;
         this.connection = connection;
         this.followeesGroups = new HashMap<>();
         this.input = input;
+    }
+
+    public Map<String, Pair<Boolean, Map<Integer, Post>>> getFollowees() {
+        return followees;
+    }
+
+    public void setFollowees(Map<String, Pair<Boolean, Map<Integer, Post>>> followees) {
+        this.followees = followees;
     }
 
     public void signIn() throws SpreadException, InterruptedIOException {
@@ -124,7 +132,7 @@ public class Follower {
 
         message.setData(this.serializer.encode(m));
         message.addGroup(group);
-        message.setAgreed();
+        message.setCausal();
         message.setReliable();
 
         connection.multicast(message);
@@ -171,7 +179,7 @@ public class Follower {
 
     public Pair<Boolean, List<Post>> getPosts(String followee, int lastPostId) {
         List<Post> posts = new ArrayList<>(this.followees.get(followee).getSnd().values());
-        List<Post> requestedPosts = posts.stream().filter(post -> post.getId() > lastPostId)
+        List<Post> requestedPosts = posts.stream().filter(post -> post.getId() >= lastPostId)
                 .collect(Collectors.toList());
         Pair<Boolean, List<Post>> pair = new Pair<>(this.followees.get(followee).getFst(), requestedPosts);
         return pair;

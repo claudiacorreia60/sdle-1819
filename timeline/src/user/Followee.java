@@ -9,28 +9,36 @@ import utils.Msg;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.*;
 import java.util.stream.Collectors;
 
 
-public class Followee {
-    private String username;
-    private Serializer serializer;
-    private SpreadConnection connection;
+public class Followee implements Serializable {
+    private transient String username;
+    private transient Serializer serializer;
+    private transient SpreadConnection connection;
     private Map<Integer, Post> myPosts;
-    private SpreadGroup myGroup;
-    private BufferedReader input;
-    private User user;
+    private transient SpreadGroup myGroup;
+    private transient BufferedReader input;
+    private transient User user;
 
     public Followee(String username, Serializer serializer, SpreadConnection connection, BufferedReader input, User user) throws IOException, SpreadException {
         this.username = username;
-        // TODO: Recuperar informação de um ficheiro
         this.myPosts = new HashMap<>();
         this.serializer = serializer;
         this.connection = connection;
         this.myGroup = null;
         this.input = input;
         this.user = user;
+    }
+
+    public Map<Integer, Post> getMyPosts() {
+        return myPosts;
+    }
+
+    public void setMyPosts(Map<Integer, Post> myPosts) {
+        this.myPosts = myPosts;
     }
 
     public void signIn() throws IOException {
@@ -167,7 +175,7 @@ public class Followee {
 
         message.setData(this.serializer.encode(m));
         message.addGroup(group);
-        message.setAgreed();
+        message.setCausal();
         message.setReliable();
 
         connection.multicast(message);

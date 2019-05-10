@@ -1,6 +1,8 @@
 package utils;
 
-public class Pair<FST, SND> {
+import java.io.Serializable;
+
+public class Pair<FST, SND> implements Serializable {
 
     private FST fst;
     private SND snd;

@@ -8,30 +8,27 @@ import spread.SpreadMessage;
 import utils.Msg;
 import utils.Pair;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.InterruptedIOException;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class User {
-    private String myAddress;
-    private String username;
-    private String password;
+public class User implements Serializable {
+    private transient String myAddress;
+    private transient String username;
+    private transient String password;
     private boolean isSuperuser;
-    private Serializer serializer;
-    private BufferedReader input;
-    private SpreadConnection connection;
-    private SpreadGroup superGroup;
-    private boolean signedIn;
-    private boolean prepareSignOut;
-    private Followee followee;
-    private Follower follower;
-    private int connectedUsers;
-    private long startTime;
+    private transient Serializer serializer;
+    private transient BufferedReader input;
+    private transient SpreadConnection connection;
+    private transient SpreadGroup superGroup;
+    private transient boolean signedIn;
+    private transient boolean prepareSignOut;
+    private transient Followee followee;
+    private transient Follower follower;
+    private transient int connectedUsers;
+    private transient long startTime;
     private long averageUpTime;
     private long totalSignIns;
 
@@ -48,13 +45,12 @@ public class User {
         this.signedIn = false;
         this.prepareSignOut = false;
         this.startTime = System.nanoTime();
-        this.averageUpTime = 0; //TODO: Persistência
-        this.totalSignIns = 1; //TODO: Persistência
+        this.averageUpTime = 0;
+        this.totalSignIns = 1;
         this.connectedUsers = 0;
         this.connection = new SpreadConnection();
 
         // Timer that transforms the User into a Super-user after 2 days of current uptime
-        // TODO: Persistência
         if (this.averageUpTime == 0) {
             SUTransform t = new SUTransform(this);
             new Timer().schedule(t, 172800*1000);
@@ -155,8 +151,18 @@ public class User {
             result = msg.getType();
         }
 
-        this.follower = new Follower(this.username, this.serializer, this.connection, this.input);
-        this.followee = new Followee(this.username, this.serializer, this.connection, this.input, this);
+        String followerFile = this.username + "-follower.db";
+        String followeeFile = this.username + "-followee.db";
+        String userFile     = this.username + ".db";
+
+        // Follower Deserialization
+        followerDeserialization(followerFile);
+
+        // Followee Deserialization
+        followeeDeserialization(followeeFile);
+
+        // User Deserialization
+        userDeserialization(userFile);
 
         handleCentralReply(msg);
 
@@ -171,6 +177,72 @@ public class User {
 
         // Make posts/Logout menu
         timelineMenu();
+    }
+
+    private void userDeserialization(String userFile) throws IOException, SpreadException {
+        try
+        {
+            // Reading the object from a file
+            FileInputStream file = new FileInputStream(userFile);
+            ObjectInputStream in = new ObjectInputStream(file);
+
+            // Method for deserialization of object
+            User savedUser = (User) in.readObject();
+            this.isSuperuser = savedUser.isSuperuser;
+            this.averageUpTime = savedUser.averageUpTime;
+            this.totalSignIns = savedUser.totalSignIns;
+
+            in.close();
+            file.close();
+
+            System.out.println("User info has been loaded");
+        } catch(Exception ex) {
+            System.out.println("Couldn't load User! Using default settings...");
+        }
+    }
+
+    private void followeeDeserialization(String followeeFile) throws IOException, SpreadException {
+        this.followee = new Followee(this.username, this.serializer, this.connection, this.input, this);
+
+        try
+        {
+            // Reading the object from a file
+            FileInputStream file = new FileInputStream(followeeFile);
+            ObjectInputStream in = new ObjectInputStream(file);
+
+            // Method for deserialization of object
+            Followee savedFollowee = (Followee) in.readObject();
+            this.followee.setMyPosts(savedFollowee.getMyPosts());
+
+            in.close();
+            file.close();
+
+            System.out.println("Followee info has been loaded");
+        } catch(Exception ex) {
+            System.out.println("Couldn't load Followee! Using default settings...");
+        }
+    }
+
+    private void followerDeserialization(String followerFile) {
+        this.follower = new Follower(this.username, this.serializer, this.connection, this.input);
+
+        try
+        {
+            // Reading the object from a file
+            FileInputStream file = new FileInputStream(followerFile);
+            ObjectInputStream in = new ObjectInputStream(file);
+
+            // Method for deserialization of object
+            Follower savedFollower = (Follower) in.readObject();
+            this.follower.setFollowees(savedFollower.getFollowees());
+
+            in.close();
+            file.close();
+
+            System.out.println("Follower info has been loaded");
+        } catch(Exception ex) {
+            System.out.println("Couldn't load Follower! Using default settings...");
+        }
     }
 
     public void timelineMenu() throws IOException, SpreadException {
@@ -264,7 +336,7 @@ public class User {
     }
 
 
-    public void signOut(boolean isExiting) throws SpreadException, InterruptedIOException {
+    public void signOut(boolean isExiting) throws SpreadException, IOException {
         this.signedIn = false;
 
         // Inform central
@@ -279,10 +351,41 @@ public class User {
         this.averageUpTime = (endTime - this.startTime)/this.totalSignIns;
 
         if (isExiting) {
+            String filename = this.username +".db";
+
+            // Serialization
+            userSerialization(filename);
+
             System.exit(0);
         }
 
-        //TODO: Persistir as coisas que devem ser persistidas
+    }
+
+    private void userSerialization(String filename) throws IOException {
+        String followerFile = this.username + "-follower.db";
+        String followeeFile = this.username + "-followee.db";
+
+        //Saving user in a file
+        FileOutputStream file = new FileOutputStream(filename);
+        ObjectOutputStream out = new ObjectOutputStream(file);
+
+        // Method for serialization of object
+        out.writeObject(this);
+
+        // Saving follower in a file
+        file = new FileOutputStream(followerFile);
+        out = new ObjectOutputStream(file);
+        out.writeObject(this.follower);
+
+        // Saving followee in a file
+        file = new FileOutputStream(followeeFile);
+        out = new ObjectOutputStream(file);
+        out.writeObject(this.followee);
+
+        out.close();
+        file.close();
+
+        System.out.println("Information has been saved!");
     }
 
     public void disconnect() throws SpreadException, InterruptedIOException {
@@ -294,7 +397,7 @@ public class User {
         }
     }
 
-    public void superuserSignOut() throws SpreadException, InterruptedIOException {
+    public void superuserSignOut() throws SpreadException, IOException {
         // Inform central
         Msg msg = new Msg();
         msg.setType("SIGNOUT");
@@ -310,6 +413,11 @@ public class User {
             }
             this.signedIn = false;
 
+            String filename = this.username +".db";
+
+            // Serialization
+            userSerialization(filename);
+
             System.exit(0);
         } else {
             // Wait for all users to leave the super group
@@ -322,7 +430,7 @@ public class User {
 
         message.setData(this.serializer.encode(m));
         message.addGroup(group);
-        message.setAgreed();
+        message.setCausal();
         message.setReliable();
 
         connection.multicast(message);
@@ -338,7 +446,7 @@ public class User {
 
         message.setData(this.serializer.encode(msg));
         message.addGroup("centralGroup");
-        message.setAgreed();
+        message.setCausal();
         message.setReliable();
 
         connection.multicast(message);
@@ -400,16 +508,20 @@ public class User {
                 break;
             // User gets promoted to superuser
             case "PROMOTION":
-                promotion();
+                if (this.username.equals(msg.getSuperuser())) {
+                    promotion();
+                }
                 // Superuser update
             case "SUPERUSER":
-                updateSuperuser(msg.getSuperuserIp(), msg.getSuperuser());
+                if (! this.username.equals(msg.getSuperuser()) && !this.prepareSignOut) {
+                    updateSuperuser(msg.getSuperuserIp(), msg.getSuperuser());
+                }
             default:
                 break;
         }
     }
 
-    private void processMembershipMsg(SpreadMessage message) throws SpreadException {
+    private void processMembershipMsg(SpreadMessage message) throws SpreadException, IOException {
         boolean isSuperGroup = message.getMembershipInfo().getGroup().toString().contains("SuperGroup");
 
         if (! this.prepareSignOut && ! isSuperGroup) {
@@ -421,12 +533,17 @@ public class User {
         }
     }
 
-    private void processSuperGroupMsg(SpreadMessage message) throws SpreadException {
+    private void processSuperGroupMsg(SpreadMessage message) throws SpreadException, IOException {
         this.connectedUsers = message.getMembershipInfo().getMembers().length;
 
         if (this.isPrepareSignOut() && this.connectedUsers == 1) {
             this.superGroup.leave();
             this.signedIn = false;
+
+            String filename = this.username +".db";
+
+            // Serialization
+            userSerialization(filename);
 
             System.exit(0);
         }

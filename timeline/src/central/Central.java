@@ -22,7 +22,6 @@ public class Central {
     private String myAddress;
     private Map<String, Pair<Boolean, String>> superusers; // <Username, (Online, IP)>
     private Map<String, Triple<String, Boolean, String>> users; // <Username, (Password, Online, IP)>
-    private Pair<Boolean,String> waitingPromotion; // (Promoted, LoggedOutSuperuser)
 
     public Central(String myAddress) throws UnknownHostException, SpreadException {
         this.connection = new SpreadConnection();
@@ -72,19 +71,6 @@ public class Central {
 
                     case "SUPERUSER":
                         // TODO: Avisar todos os superusers da existencia de um novo superuser para eles atualizarem o ficheiro de config
-                        if (this.waitingPromotion != null && this.waitingPromotion.getFst()) {
-                            String loggedOutSuperuser = this.waitingPromotion.getSnd();
-
-                            Msg m = new Msg();
-                            m.setType("SUPERUSER");
-                            m.setSuperuser(username);
-                            m.setSuperuserIp(msg.getSuperuserIp());
-                            sendMsg(m, loggedOutSuperuser+"SuperGroup");
-
-                            m.setType("DISCONNECT");
-                            sendMsg(m, this.superusers.get(loggedOutSuperuser).getSnd());
-                            this.waitingPromotion = null;
-                        }
                         String superuserIp = msg.getSuperuserIp();
                         this.superusers.put(username, new Pair(true, superuserIp));
                         break;
@@ -119,6 +105,7 @@ public class Central {
 
             msg = new Msg();
             msg.setType("PROMOTION");
+            msg.setSuperuser(username);
             dest = message.getSender();
             sendMsg(msg, dest);
         }
@@ -177,17 +164,18 @@ public class Central {
             msg.setSuperuser(superuser);
             msg.setSuperuserIp(superuserIp);
 
-            sendMsg(msg, superuser + "SuperGroup");
+            sendMsg(msg, username + "SuperGroup");
         } else {
             msg.setType("PROMOTION");
             String user = getRandomUser();
+            msg.setSuperuser(user);
             sendMsg(msg, user+"Group");
 
-            this.waitingPromotion = new Pair(true, username);
-
             String userIp = this.users.get(user).getTrd();
+            msg.setType("SUPERUSER");
             msg.setSuperuser(user);
             msg.setSuperuserIp(userIp);
+            sendMsg(msg, username+"SuperGroup");
         }
 
     }
@@ -217,8 +205,12 @@ public class Central {
                 .filter(e -> e.getValue().getSnd())
                 .map(e -> e.getKey())
                 .collect(Collectors.toList());
-        int randomIndex = rand.nextInt(online.size());
-        return online.get(randomIndex);
+        int randomIndex;
+        if (online.size() > 0) {
+            randomIndex = rand.nextInt(online.size());
+            return online.get(randomIndex);
+        }
+        return "";
     }
 
     private void sendMsg(Msg msg, SpreadGroup dest) throws SpreadException {

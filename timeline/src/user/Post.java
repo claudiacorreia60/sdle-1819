@@ -1,9 +1,9 @@
 package user;
 
+import java.io.Serializable;
 import java.util.Calendar;
-import java.util.Date;
 
-public class Post {
+public class Post implements Serializable {
     private int id;
     private Calendar date;
     private String content;

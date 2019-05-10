@@ -2,9 +2,10 @@ package utils;
 
 import user.Post;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class Msg {
+public class Msg implements Serializable {
     private String type;
     private String password;
     private String ip;
