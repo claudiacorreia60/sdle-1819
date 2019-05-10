@@ -96,6 +96,7 @@ TYPE: SUPERUSER_UPDATE
 	2. Envia uma mensagem ao superuser:
 	```
 	TYPE: PROMOTION
+	SUPERUSER: <user>
 	```
 
 #### Receção de uma transformação em superuser
