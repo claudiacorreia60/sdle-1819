@@ -23,6 +23,8 @@ public class Follower implements Serializable {
     private transient SpreadConnection connection;
     private transient Map<String, SpreadGroup> followeesGroups;
     private transient BufferedReader input;
+    private int receivedPostsMsgs;
+    private List<Post> receivedPosts;
 
 
     public Follower(String username, Serializer serializer, SpreadConnection connection, BufferedReader input) {
@@ -32,6 +34,8 @@ public class Follower implements Serializable {
         this.connection = connection;
         this.followeesGroups = new HashMap<>();
         this.input = input;
+        this.receivedPostsMsgs = 0;
+        this.receivedPosts = new ArrayList<>();
     }
 
     public Map<String, Pair<Boolean, Map<Integer, Post>>> getFollowees() {
@@ -161,19 +165,42 @@ public class Follower implements Serializable {
             if (!myPost) {
                 followeePosts.put(post.getId(), post);
             }
-            System.out.println("\n################## NEW POST ##################");
-            System.out.println("FROM: "+followee);
-            System.out.println("DATE: "+post.getDate().getTime().toString());
-            System.out.println("POST: "+post.getContent());
+            // Waits to receive all posts from the followees/followers
+            if (this.receivedPostsMsgs < this.followees.size()){
+                this.receivedPosts.add(post);
+            }
+            //
+            else {
+                System.out.println("\n################## NEW POST ##################");
+                System.out.println("FROM: "+followee);
+                System.out.println("DATE: "+post.getDate().getTime().toString());
+                System.out.println("POST: "+post.getContent());
+            }
         }
 
         if(!myPost) {
             // Update status of the list of posts
             if (type.equals("POSTS")) {
                 pair.setFst(postsStatus);
+                this.receivedPostsMsgs++;
             }
             pair.setSnd(followeePosts);
             this.followees.put(followee, pair);
+        }
+        if (this.receivedPostsMsgs == this.followees.size()) {
+            printPosts();
+        }
+    }
+
+    public void printPosts() {
+        this.receivedPostsMsgs++;
+        List<Post> result = this.receivedPosts.stream().sorted(Comparator.comparing(Post::getDate)).
+                collect(Collectors.toList());
+        for (Post post : result) {
+            System.out.println("\n################## NEW POST ##################");
+            System.out.println("FROM: "+post.getUsername());
+            System.out.println("DATE: "+post.getDate().getTime().toString());
+            System.out.println("POST: "+post.getContent());
         }
     }
 

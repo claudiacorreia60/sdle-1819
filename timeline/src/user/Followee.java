@@ -47,7 +47,7 @@ public class Followee implements Serializable {
             this.myGroup = new SpreadGroup();
             this.myGroup.join(this.connection, this.username + "Group");
             // Delete posts older than 5 minutes
-            filterPosts(5, "minute");
+            //filterPosts(5, "minute");
         } catch (SpreadException e) {
             e.printStackTrace();
         }
@@ -56,8 +56,15 @@ public class Followee implements Serializable {
     }
 
     public List<Post> getPosts(int lastPostId) {
-        List<Post> requestedPosts = this.myPosts.values().stream().filter(post -> post.getId() >= lastPostId)
+        List<Post> requestedPosts = this.myPosts.values().stream()
+                .filter(post -> post.getId() >= lastPostId)
+                //.sorted(Comparator.comparing(Post::getDate))
                 .collect(Collectors.toList());
+        int size = requestedPosts.size();
+        // Filter posts to send
+        for (int i = 0; i < size-5; i++) {
+            requestedPosts.remove(i);
+        }
         return requestedPosts;
     }
 
@@ -69,7 +76,7 @@ public class Followee implements Serializable {
         // Get post ID
         int id = postId();
         // Store post
-        Post post = new Post(id, date, content);
+        Post post = new Post(this.username, id, date, content);
         this.myPosts.put(id, post);
         // Send post
         sendPost(post);
