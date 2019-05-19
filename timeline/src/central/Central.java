@@ -63,8 +63,10 @@ public class Central {
                         break;
                     case "SIGNOUT":
                         if(this.superusers.containsKey(username)) {
+                            System.out.println(username + " logging out as SU");
                             logoutFromSuperuser(username);
                         } else {
+                            System.out.println(username + " logging out as U");
                             logoutFromUser(message, username);
                         }
                         break;
@@ -154,13 +156,13 @@ public class Central {
 
     private void logoutFromSuperuser(String username) throws SpreadException {
         Msg msg = new Msg();
-        msg.setType("SUPERUSER");
         this.superusers.put(username, new Pair(false, ""));
         this.users.put(username, new Triple(this.users.get(username).getFst(), false, ""));
 
         if (this.superusers.values().stream().anyMatch(p -> p.getFst() == true)) {
             String superuser = getRandomSuperuser();
             String superuserIp = this.superusers.get(superuser).getSnd();
+            msg.setType("SUPERUSER");
             msg.setSuperuser(superuser);
             msg.setSuperuserIp(superuserIp);
 
@@ -168,16 +170,23 @@ public class Central {
         } else {
             msg.setType("PROMOTION");
             String user = getRandomUser();
-            msg.setSuperuser(user);
-            sendMsg(msg, user+"Group");
+            if (!"".equals(user)) {
+                String userIp = this.users.get(user).getTrd();
+                this.superusers.put(user, new Pair<>(true, userIp));
 
-            String userIp = this.users.get(user).getTrd();
-            msg.setType("SUPERUSER");
-            msg.setSuperuser(user);
-            msg.setSuperuserIp(userIp);
-            sendMsg(msg, username+"SuperGroup");
+                msg.setSuperuser(user);
+                sendMsg(msg, user+"Group");
+
+                System.out.println("Promoted " + user + "!");
+
+                msg.setType("SUPERUSER");
+                msg.setSuperuser(user);
+                msg.setSuperuserIp(userIp);
+                sendMsg(msg, username + "SuperGroup");
+            } else {
+                System.out.println("No users to promote...");
+            }
         }
-
     }
 
     private void sendMsg(Msg msg, String group) throws SpreadException {

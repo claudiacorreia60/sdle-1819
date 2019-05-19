@@ -188,7 +188,6 @@ public class User implements Serializable {
 
             // Method for deserialization of object
             User savedUser = (User) in.readObject();
-            this.isSuperuser = savedUser.isSuperuser;
             this.averageUpTime = savedUser.averageUpTime;
             this.totalSignIns = savedUser.totalSignIns;
 
@@ -296,16 +295,21 @@ public class User implements Serializable {
         // Disconnect from my daemon
         this.connection.disconnect();
         openSpreadConnection(this.myAddress);
+
         this.isSuperuser = true;
+
         // Connect to superuser's group
         this.superGroup = new SpreadGroup();
         this.superGroup.join(this.connection, this.username+"SuperGroup");
         // Join groups
-        this.follower.signIn();
-        this.followee.signIn();
+        if (! this.signedIn) {
+            this.follower.signIn();
+            this.followee.signIn();
+        }
     }
 
     public void updateSuperuser(String superuserIp, String superuser) throws SpreadException, IOException {
+        System.out.println("Joining " + superuser + " SU Group");
         // Leave groups
         disconnect();
         // Disconnect from my daemon
@@ -348,7 +352,8 @@ public class User implements Serializable {
         disconnect();
 
         long endTime = System.nanoTime();
-        this.averageUpTime = (endTime - this.startTime)/this.totalSignIns;
+        this.averageUpTime = (this.averageUpTime * (totalSignIns-1) + 
+                             (endTime - this.startTime))/this.totalSignIns;
 
         if (isExiting) {
             String filename = this.username +".db";
@@ -398,6 +403,7 @@ public class User implements Serializable {
     }
 
     public void superuserSignOut() throws SpreadException, IOException {
+        System.out.println("Logging out as SU");
         // Inform central
         Msg msg = new Msg();
         msg.setType("SIGNOUT");
@@ -412,6 +418,10 @@ public class User implements Serializable {
                 this.superGroup.leave();
             }
             this.signedIn = false;
+
+            long endTime = System.nanoTime();
+            this.averageUpTime = (this.averageUpTime * (totalSignIns-1) +
+                    (endTime - this.startTime))/this.totalSignIns;
 
             String filename = this.username +".db";
 
@@ -534,18 +544,22 @@ public class User implements Serializable {
     }
 
     private void processSuperGroupMsg(SpreadMessage message) throws SpreadException, IOException {
-        this.connectedUsers = message.getMembershipInfo().getMembers().length;
+        SpreadGroup[] members = message.getMembershipInfo().getMembers();
 
-        if (this.isPrepareSignOut() && this.connectedUsers == 1) {
-            this.superGroup.leave();
-            this.signedIn = false;
+        if(members != null) {
+            this.connectedUsers = message.getMembershipInfo().getMembers().length;
 
-            String filename = this.username +".db";
+            if (this.isPrepareSignOut() && this.connectedUsers == 1) {
+                this.superGroup.leave();
+                this.signedIn = false;
 
-            // Serialization
-            userSerialization(filename);
+                String filename = this.username + ".db";
 
-            System.exit(0);
+                // Serialization
+                userSerialization(filename);
+
+                System.exit(0);
+            }
         }
     }
 
